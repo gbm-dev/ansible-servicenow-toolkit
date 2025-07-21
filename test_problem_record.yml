@@ -1,0 +1,68 @@
+---
+# Test playbook for ServiceNow Problem Record creation
+
+- name: Test ServiceNow Problem Record Creation
+  hosts: localhost
+  gather_facts: yes
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+    # Simulate a network device from inventory
+    inventory_hostname: "core-sw-01"
+    ansible_host: "10.1.1.1"
+    device_type: "cisco_ios"
+    device_location: "Datacenter A"
+    device_asset_tag: "P1000002"
+    
+  tasks:
+    - name: Create ServiceNow problem record for recurring network issues
+      include_role:
+        name: servicenow_itsm
+      vars:
+        itsm_type: problem
+        problem_short_description: "[PROBLEM] Recurring connectivity issues on {{ inventory_hostname }}"
+        problem_description: |
+          Recurring connectivity issues identified on network device {{ inventory_hostname }}
+          
+          Device Details:
+          - Hostname: {{ inventory_hostname }}
+          - IP Address: {{ ansible_host }}
+          - Device Type: {{ device_type }}
+          - Location: {{ device_location }}
+          - Asset Tag: {{ device_asset_tag }}
+          
+          Problem Summary:
+          Multiple incidents have been reported regarding intermittent connectivity
+          issues affecting this device. Pattern analysis suggests underlying
+          hardware or configuration problem requiring root cause analysis.
+          
+          Related Incidents:
+          - Multiple ping timeout failures
+          - Sporadic interface flapping
+          - Performance degradation reports
+          
+          Business Impact:
+          Recurring service interruptions affecting dependent network services
+          and connected systems in {{ device_location }}.
+          
+          Next Steps:
+          Root cause analysis required to identify and resolve underlying issue.
+        problem_correlation_id: "device_recurring_{{ inventory_hostname }}"
+        problem_impact: medium
+        problem_urgency: medium
+        problem_assignment_group: "{{ servicenow_default_assignment_group }}"
+        problem_category: network
+        problem_subcategory: connectivity
+        problem_type: defect
+        problem_known_error: false
+        problem_root_cause_known: false
+        problem_work_notes: "Automated problem record created by Ansible based on pattern analysis"
+        problem_asset_tag: "{{ device_asset_tag }}"

@@ -1,0 +1,72 @@
+---
+# Test playbook for ServiceNow Change Request creation
+
+- name: Test ServiceNow Change Request Creation
+  hosts: localhost
+  gather_facts: yes
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+    # Simulate a network device from inventory
+    inventory_hostname: "core-sw-01"
+    ansible_host: "10.1.1.1"
+    device_type: "cisco_ios"
+    device_location: "Datacenter A"
+    device_asset_tag: "P1000002"
+    
+  tasks:
+    - name: Create ServiceNow change request for network maintenance
+      include_role:
+        name: servicenow_itsm
+      vars:
+        itsm_type: change
+        change_type: normal
+        change_short_description: "[MAINTENANCE] Network device {{ inventory_hostname }} scheduled maintenance"
+        change_description: |
+          Scheduled maintenance for network device {{ inventory_hostname }}
+          
+          Device Details:
+          - Hostname: {{ inventory_hostname }}
+          - IP Address: {{ ansible_host }}
+          - Device Type: {{ device_type }}
+          - Location: {{ device_location }}
+          - Asset Tag: {{ device_asset_tag }}
+          
+          Maintenance Activities:
+          - Firmware upgrade to latest stable version
+          - Configuration backup and validation
+          - Security patch application
+          - Performance optimization
+          
+          Expected Impact:
+          Brief service interruption during maintenance window
+        change_correlation_id: "device_maintenance_{{ inventory_hostname }}"
+        change_priority: moderate
+        change_impact: medium
+        change_risk: low
+        change_category: software
+        change_assignment_group: "{{ servicenow_default_assignment_group }}"
+        change_requested_by: "{{ servicenow_default_caller }}"
+        change_work_notes: "Automated change request created by Ansible"
+        change_asset_tag: "{{ device_asset_tag }}"
+        change_implementation_plan: |
+          1. Create configuration backup
+          2. Apply firmware update during maintenance window
+          3. Verify device functionality post-update
+          4. Update documentation
+        change_backout_plan: |
+          1. Restore previous firmware version if issues occur
+          2. Restore configuration from backup
+          3. Notify operations team of rollback
+        change_test_plan: |
+          1. Verify device connectivity
+          2. Test critical services
+          3. Validate performance metrics

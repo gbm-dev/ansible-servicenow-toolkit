@@ -1,0 +1,24 @@
+Network Device Connectivity Failure
+
+Device Details:
+- Hostname: {{ inventory_hostname }}
+- IP Address: {{ ansible_host }}
+- Device Type: {{ device_type | default('network_device') }}
+- Location: {{ device_location | default('Unknown') }}
+- Asset Tag: {{ device_asset_tag }}
+
+Failure Information:
+- Check Type: ICMP Ping Test
+- Timeout: {{ uptime_check_timeout | default(10) }}s
+- Failed Task: {{ ansible_failed_task.name }}
+- Error Message: {{ ansible_failed_result.msg | default('Connection timeout') }}
+
+Impact:
+This device is not responding to network connectivity tests and may be offline,
+affecting network services and connected systems.
+
+Recommended Actions:
+1. Verify physical connectivity and power status
+2. Check upstream network devices
+3. Review recent configuration changes
+4. Check device logs if accessible via console

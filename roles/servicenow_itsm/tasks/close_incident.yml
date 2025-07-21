@@ -14,21 +14,10 @@
     instance: "{{ servicenow_instance }}"
     sys_id: "{{ item.sys_id }}"
     state: resolved
-    close_code: "Resolved by caller"
-    close_notes: |
-      Device connectivity restored
-      
-      Resolution Details:
-      - Device: {{ inventory_hostname }} ({{ ansible_host | default('N/A') }})
-      - Resolved Time: {{ ansible_date_time.iso8601 }}
-      - Resolution: Device is now responding to health checks
-      - Downtime Duration: Calculated from {{ item.opened_at }}
-      
-      Automated closure by Ansible health check monitoring
+    close_code: "{{ incident_close_code | default('Resolved by caller') }}"
+    close_notes: "{{ incident_close_notes | default('Device connectivity restored - Automated closure by Ansible') }}"
     other:
-      work_notes: |
-        Device back online - automatically closing incident
-        Last successful check: {{ ansible_date_time.iso8601 }}
+      work_notes: "{{ incident_close_work_notes | default('Device back online - automatically closing incident') }}"
   loop: "{{ open_incidents.records }}"
   when: open_incidents.records | length > 0
   delegate_to: localhost

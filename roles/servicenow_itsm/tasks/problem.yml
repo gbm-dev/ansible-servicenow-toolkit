@@ -1,0 +1,130 @@
+---
+# Purpose: Create ServiceNow problem records with duplicate prevention and CI association
+# Design Pattern: Problem Management with State Validation and Assignment Requirements
+
+- name: Validate required problem variables
+  assert:
+    that:
+      - problem_short_description is defined
+      - problem_description is defined
+    fail_msg: "Required variables missing: problem_short_description, problem_description"
+
+- name: Validate assigned_to for non-new states
+  assert:
+    that:
+      - problem_assigned_to is defined
+    fail_msg: "assigned_to is required when problem state is not 'new'"
+  when: problem_state is defined and problem_state not in ['new']
+
+- name: Set problem creation timestamp
+  set_fact:
+    problem_timestamp: "{{ ansible_date_time.epoch }}"
+
+- name: Check for existing problems to prevent duplicates
+  servicenow.itsm.problem_info:
+    instance: "{{ servicenow_instance }}"
+    sysparm_query: "correlation_id={{ problem_correlation_id }}^state!=7"  # 7 = closed
+  register: existing_problems
+  delegate_to: localhost
+  when: 
+    - servicenow_duplicate_check.enabled | bool
+    - problem_correlation_id is defined
+
+- name: Lookup Configuration Item (CI) for network device
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ servicenow_instance }}"
+    query:
+      - asset_tag: "= {{ problem_asset_tag | default('') }}"
+  register: ci_info_by_asset
+  delegate_to: localhost
+  when: 
+    - servicenow_ci_lookup.enabled | bool
+    - existing_problems.records | default([]) | length == 0
+    - problem_asset_tag is defined
+
+- name: Lookup Configuration Item (CI) by name if no asset tag
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ servicenow_instance }}"
+    name: "{{ problem_ci_name | default(inventory_hostname) }}"
+  register: ci_info_by_name
+  delegate_to: localhost
+  when: 
+    - servicenow_ci_lookup.enabled | bool
+    - existing_problems.records | default([]) | length == 0
+    - problem_asset_tag is not defined
+
+- name: Set CI info from lookup results
+  set_fact:
+    ci_info: "{{ ci_info_by_asset if problem_asset_tag is defined else ci_info_by_name }}"
+  when:
+    - servicenow_ci_lookup.enabled | bool
+    - existing_problems.records | default([]) | length == 0
+
+- name: Create new ServiceNow problem record
+  servicenow.itsm.problem:
+    instance: "{{ servicenow_instance }}"
+    state: "{{ problem_state | default('new') }}"
+    short_description: "{{ problem_short_description }}"
+    description: "{{ problem_description }}"
+    impact: "{{ problem_impact | default('medium') }}"
+    urgency: "{{ problem_urgency | default('medium') }}"
+    assigned_to: "{{ problem_assigned_to | default(omit) }}"
+    other:
+      cmdb_ci: "{{ ci_info.records[0].sys_id | default('') }}"
+      correlation_id: "{{ problem_correlation_id | default(omit) }}"
+      work_notes: "{{ problem_work_notes | default('Created by Ansible automation') }}"
+      u_automation_source: ansible
+      u_device_hostname: "{{ inventory_hostname }}"
+      assignment_group: "{{ problem_assignment_group | default(servicenow_incident_defaults.assignment_group) }}"
+      category: "{{ problem_category | default('software') }}"
+      subcategory: "{{ problem_subcategory | default('application') }}"
+      problem_type: "{{ problem_type | default('defect') }}"
+      known_error: "{{ problem_known_error | default(false) }}"
+      root_cause_known: "{{ problem_root_cause_known | default(false) }}"
+  register: snow_problem_created
+  delegate_to: localhost
+  retries: "{{ servicenow_api_retry.retries }}"
+  delay: "{{ servicenow_api_retry.delay }}"
+  when: existing_problems.records | default([]) | length == 0
+
+- name: Update existing problem with new occurrence
+  servicenow.itsm.problem:
+    instance: "{{ servicenow_instance }}"
+    sys_id: "{{ existing_problems.records[0].sys_id }}"
+    other:
+      work_notes: |
+        Additional problem occurrence detected: {{ ansible_date_time.iso8601 }}
+        
+        {{ problem_work_notes | default('Updated by Ansible automation') }}
+        
+        Occurrence count: {{ (existing_problems.records[0].u_occurrence_count | default(1) | int) + 1 }}
+      u_occurrence_count: "{{ (existing_problems.records[0].u_occurrence_count | default(1) | int) + 1 }}"
+      u_last_occurrence: "{{ ansible_date_time.iso8601 }}"
+  register: snow_problem_updated
+  delegate_to: localhost
+  retries: "{{ servicenow_api_retry.retries }}"
+  delay: "{{ servicenow_api_retry.delay }}"
+  when: 
+    - existing_problems.records | default([]) | length > 0
+    - problem_correlation_id is defined
+
+- name: Set problem result facts
+  set_fact:
+    servicenow_problem_result:
+      action: "{{ 'created' if existing_problems.records | default([]) | length == 0 else 'updated' }}"
+      number: "{{ snow_problem_created.record.number if snow_problem_created is defined and snow_problem_created.record is defined else existing_problems.records[0].number }}"
+      sys_id: "{{ snow_problem_created.record.sys_id if snow_problem_created is defined and snow_problem_created.record is defined else existing_problems.records[0].sys_id }}"
+      ci_associated: "{{ ci_info.records | default([]) | length > 0 }}"
+      state: "{{ problem_state | default('new') }}"
+
+- name: Display problem information
+  debug:
+    msg: |
+      ServiceNow Problem {{ servicenow_problem_result.action | upper }}
+      - Number: {{ servicenow_problem_result.number }}
+      - State: {{ servicenow_problem_result.state | upper }}
+      - Sys ID: {{ servicenow_problem_result.sys_id }}
+      - CI Associated: {{ 'Yes' if servicenow_problem_result.ci_associated else 'No' }}
+      {% if servicenow_problem_result.action == 'updated' %}
+      - Occurrence Count: {{ (existing_problems.records[0].u_occurrence_count | default(1) | int) + 1 }}
+      {% endif %}

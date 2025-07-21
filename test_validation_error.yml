@@ -1,0 +1,61 @@
+---
+# Test playbook to demonstrate validation of required fields
+
+- name: Test ServiceNow Required Field Validation
+  hosts: localhost
+  gather_facts: yes
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Simulate a network device
+    inventory_hostname: "test-device-01"
+    ansible_host: "10.1.1.100"
+    
+  tasks:
+    - name: Test missing caller field (should fail)
+      block:
+        - name: Try to create incident without caller
+          include_role:
+            name: servicenow_itsm
+          vars:
+            itsm_type: incident
+            # incident_caller: MISSING - should cause validation error
+            incident_short_description: "[TEST] Missing caller field test"
+            incident_description: "This should fail due to missing caller field"
+            incident_correlation_id: "test_missing_caller"
+            
+      rescue:
+        - name: Display validation error for missing caller
+          debug:
+            msg: "✅ EXPECTED FAILURE: {{ ansible_failed_result.msg }}"
+    
+    - name: Test missing short_description field (should fail)  
+      block:
+        - name: Try to create incident without short_description
+          include_role:
+            name: servicenow_itsm
+          vars:
+            itsm_type: incident
+            incident_caller: "admin"
+            # incident_short_description: MISSING - should cause validation error
+            incident_description: "This should fail due to missing short_description"
+            incident_correlation_id: "test_missing_short_desc"
+            
+      rescue:
+        - name: Display validation error for missing short_description
+          debug:
+            msg: "✅ EXPECTED FAILURE: {{ ansible_failed_result.msg }}"
+    
+    - name: Test successful incident with all required fields
+      include_role:
+        name: servicenow_itsm
+      vars:
+        itsm_type: incident
+        incident_caller: "admin"
+        incident_short_description: "[TEST] All required fields provided"
+        incident_description: "This should succeed with all required fields"
+        incident_correlation_id: "test_validation_success"

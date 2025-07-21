@@ -1,0 +1,40 @@
+---
+# Test playbook to demonstrate incident closure with templates
+
+- name: Test ServiceNow Incident Closure Templates
+  hosts: localhost
+  gather_facts: yes
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+    # Simulate a network device from inventory
+    inventory_hostname: "core-sw-01"
+    ansible_host: "10.1.1.1"
+    device_type: "cisco_ios"
+    device_location: "Datacenter A"
+    device_asset_tag: "P1000002"
+    uptime_check_timeout: 10
+    
+  tasks:
+    - name: Generate incident closure content from templates
+      set_fact:
+        rendered_close_notes: "{{ lookup('template', 'roles/device_uptime/templates/connectivity_resolved_close_notes.j2') }}"
+        rendered_close_work_notes: "{{ lookup('template', 'roles/device_uptime/templates/connectivity_resolved_work_notes.j2') }}"
+
+    - name: Close any open incidents for this device using templates
+      include_role:
+        name: servicenow_itsm
+        tasks_from: close_incident
+      vars:
+        incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
+        incident_close_code: "Resolved by caller"  
+        incident_close_notes: "{{ rendered_close_notes }}"
+        incident_close_work_notes: "{{ rendered_close_work_notes }}"

@@ -1,0 +1,14 @@
+Device connectivity restored
+
+Resolution Details:
+- Device: {{ inventory_hostname }} ({{ ansible_host }})
+- Resolved Time: {{ ansible_date_time.iso8601 }}
+- Resolution: Device is now responding to health checks
+- Check Type: {{ check_type | default('ICMP Ping Test') }}
+- Success Timeout: {{ uptime_check_timeout | default(10) }}s
+
+{% if downtime_duration is defined %}
+Downtime Duration: {{ downtime_duration }}
+{% endif %}
+
+Automated closure by Ansible health check monitoring

@@ -1,0 +1,137 @@
+---
+# Purpose: Create ServiceNow change requests with proper validation and CI association
+# Design Pattern: Change Management with State Validation and Assignment Group Requirements
+
+- name: Validate required change request variables
+  assert:
+    that:
+      - change_short_description is defined
+      - change_description is defined
+      - change_type is defined
+      - change_type in ['standard', 'normal', 'emergency']
+    fail_msg: "Required variables missing: change_short_description, change_description, change_type (standard|normal|emergency)"
+
+- name: Validate assignment_group for non-new states
+  assert:
+    that:
+      - change_assignment_group is defined
+    fail_msg: "assignment_group is required when state is not 'new'"
+  when: change_state is defined and change_state not in ['new']
+
+- name: Set change creation timestamp
+  set_fact:
+    change_timestamp: "{{ ansible_date_time.epoch }}"
+
+- name: Check for existing change requests to prevent duplicates
+  servicenow.itsm.change_request_info:
+    instance: "{{ servicenow_instance }}"
+    sysparm_query: "correlation_id={{ change_correlation_id }}^state!=-4"  # -4 = closed complete
+  register: existing_changes
+  delegate_to: localhost
+  when: 
+    - servicenow_duplicate_check.enabled | bool
+    - change_correlation_id is defined
+
+- name: Lookup Configuration Item (CI) for network device
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ servicenow_instance }}"
+    query:
+      - asset_tag: "= {{ change_asset_tag | default('') }}"
+  register: ci_info_by_asset
+  delegate_to: localhost
+  when: 
+    - servicenow_ci_lookup.enabled | bool
+    - existing_changes.records | default([]) | length == 0
+    - change_asset_tag is defined
+
+- name: Lookup Configuration Item (CI) by name if no asset tag
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ servicenow_instance }}"
+    name: "{{ change_ci_name | default(inventory_hostname) }}"
+  register: ci_info_by_name
+  delegate_to: localhost
+  when: 
+    - servicenow_ci_lookup.enabled | bool
+    - existing_changes.records | default([]) | length == 0
+    - change_asset_tag is not defined
+
+- name: Set CI info from lookup results
+  set_fact:
+    ci_info: "{{ ci_info_by_asset if change_asset_tag is defined else ci_info_by_name }}"
+  when:
+    - servicenow_ci_lookup.enabled | bool
+    - existing_changes.records | default([]) | length == 0
+
+- name: Create new ServiceNow change request
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_instance }}"
+    state: "{{ change_state | default('new') }}"
+    type: "{{ change_type }}"
+    short_description: "{{ change_short_description }}"
+    description: "{{ change_description }}"
+    priority: "{{ change_priority | default('moderate') }}"
+    impact: "{{ change_impact | default('medium') }}"
+    risk: "{{ change_risk | default('moderate') }}"
+    category: "{{ change_category | default('software') }}"
+    assignment_group: "{{ change_assignment_group | default(servicenow_incident_defaults.assignment_group) }}"
+    other:
+      cmdb_ci: "{{ ci_info.records[0].sys_id | default('') }}"
+      correlation_id: "{{ change_correlation_id | default(omit) }}"
+      work_notes: "{{ change_work_notes | default('Created by Ansible automation') }}"
+      u_automation_source: ansible
+      u_device_hostname: "{{ inventory_hostname }}"
+      requested_by: "{{ change_requested_by | default(servicenow_incident_defaults.caller) }}"
+      start_date: "{{ change_start_date | default(omit) }}"
+      end_date: "{{ change_end_date | default(omit) }}"
+      implementation_plan: "{{ change_implementation_plan | default(omit) }}"
+      backout_plan: "{{ change_backout_plan | default(omit) }}"
+      test_plan: "{{ change_test_plan | default(omit) }}"
+  register: snow_change_created
+  delegate_to: localhost
+  retries: "{{ servicenow_api_retry.retries }}"
+  delay: "{{ servicenow_api_retry.delay }}"
+  when: existing_changes.records | default([]) | length == 0
+
+- name: Update existing change request with new information
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_instance }}"
+    sys_id: "{{ existing_changes.records[0].sys_id }}"
+    other:
+      work_notes: |
+        Change request updated: {{ ansible_date_time.iso8601 }}
+        
+        {{ change_work_notes | default('Updated by Ansible automation') }}
+        
+        Update count: {{ (existing_changes.records[0].u_update_count | default(1) | int) + 1 }}
+      u_update_count: "{{ (existing_changes.records[0].u_update_count | default(1) | int) + 1 }}"
+      u_last_update: "{{ ansible_date_time.iso8601 }}"
+  register: snow_change_updated
+  delegate_to: localhost
+  retries: "{{ servicenow_api_retry.retries }}"
+  delay: "{{ servicenow_api_retry.delay }}"
+  when: 
+    - existing_changes.records | default([]) | length > 0
+    - change_correlation_id is defined
+
+- name: Set change request result facts
+  set_fact:
+    servicenow_change_result:
+      action: "{{ 'created' if existing_changes.records | default([]) | length == 0 else 'updated' }}"
+      number: "{{ snow_change_created.record.number if snow_change_created is defined and snow_change_created.record is defined else existing_changes.records[0].number }}"
+      sys_id: "{{ snow_change_created.record.sys_id if snow_change_created is defined and snow_change_created.record is defined else existing_changes.records[0].sys_id }}"
+      ci_associated: "{{ ci_info.records | default([]) | length > 0 }}"
+      type: "{{ change_type }}"
+      state: "{{ change_state | default('new') }}"
+
+- name: Display change request information
+  debug:
+    msg: |
+      ServiceNow Change Request {{ servicenow_change_result.action | upper }}
+      - Number: {{ servicenow_change_result.number }}
+      - Type: {{ servicenow_change_result.type | upper }}
+      - State: {{ servicenow_change_result.state | upper }}
+      - Sys ID: {{ servicenow_change_result.sys_id }}
+      - CI Associated: {{ 'Yes' if servicenow_change_result.ci_associated else 'No' }}
+      {% if servicenow_change_result.action == 'updated' %}
+      - Update Count: {{ (existing_changes.records[0].u_update_count | default(1) | int) + 1 }}
+      {% endif %}

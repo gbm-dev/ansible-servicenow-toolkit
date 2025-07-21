@@ -7,3 +7,18 @@ uptime_check_retries: 2
 uptime_incident_urgency: medium
 uptime_incident_impact: medium
 uptime_assignment_group: Network
+
+# Monitoring scheduler configuration
+monitoring_config:
+  enabled: true
+  role_type: device_monitoring
+  default_schedule: "*/5 * * * *"  # Every 5 minutes
+  description: "Network device connectivity monitoring with ServiceNow integration"
+  inventory_groups:
+    - network_devices
+    - core_switches
+    - access_switches
+    - routers
+  timeout: 300
+  retry_count: 3
+  playbook_args: "--limit={{inventory_group}} -e uptime_check_timeout={{timeout}}"

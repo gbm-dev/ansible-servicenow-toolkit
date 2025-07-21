@@ -2,13 +2,21 @@
 # Purpose: Create ServiceNow incidents with duplicate prevention and CI association
 # Design Pattern: Error Handling with Rescue Blocks and Conditional Creation
 
-- name: Validate required variables
+- name: Validate required incident variables
   assert:
     that:
       - incident_short_description is defined
+      - incident_short_description | length > 0
+      - incident_caller is defined
+      - incident_caller | length > 0
+    fail_msg: "Required ServiceNow incident fields missing: incident_short_description (required), incident_caller (required)"
+
+- name: Validate optional but recommended fields
+  assert:
+    that:
       - incident_description is defined
       - incident_correlation_id is defined
-    fail_msg: "Required variables missing: incident_short_description, incident_description, incident_correlation_id"
+    fail_msg: "Recommended fields missing: incident_description, incident_correlation_id (needed for duplicate prevention)"
 
 - name: Set incident creation timestamp
   set_fact:
@@ -56,28 +64,23 @@
   servicenow.itsm.incident:
     instance: "{{ servicenow_instance }}"
     state: new
-    caller: "{{ incident_caller | default(servicenow_incident_defaults.caller) }}"
-    short_description: "{{ incident_short_description }}"
-    description: |
-      {{ incident_description }}
-      
-      Device Information:
-      - Hostname: {{ inventory_hostname }}
-      - IP Address: {{ ansible_host | default('Not specified') }}
-      - Device Type: {{ device_type | default('network_device') }}
-      
-      Automation Details:
-      - Playbook: {{ playbook_name | default(ansible_play_name) | default('Unknown') }}
-      - Task: {{ ansible_failed_task.name | default('Health Check') }}
-      - Timestamp: {{ ansible_date_time.iso8601 }}
-    urgency: "{{ incident_urgency | default('medium') }}"
-    impact: "{{ incident_impact | default('medium') }}"
+    caller: "{{ incident_caller }}"  # Required field - no default
+    short_description: "{{ incident_short_description }}"  # Required field - no default
+    description: "{{ incident_description | default('Created by Ansible automation') }}"  # Optional with default
+    urgency: "{{ incident_urgency | default('medium') }}"  # Optional: low, medium, high
+    impact: "{{ incident_impact | default('medium') }}"    # Optional: low, medium, high  
     other:
-      assignment_group: "{{ incident_assignment_group | default(servicenow_incident_defaults.assignment_group) }}"
-      category: "{{ incident_category | default(servicenow_incident_defaults.category) }}"
-      subcategory: "{{ incident_subcategory | default(servicenow_incident_defaults.subcategory) }}"
+      # Optional ServiceNow fields with defaults
+      assignment_group: "{{ incident_assignment_group | default(servicenow_incident_defaults.assignment_group) | default('') }}"
+      category: "{{ incident_category | default(servicenow_incident_defaults.category) | default('') }}"
+      subcategory: "{{ incident_subcategory | default(servicenow_incident_defaults.subcategory) | default('') }}"
+      service: "{{ incident_service | default('') }}"
+      service_offering: "{{ incident_service_offering | default('') }}"
+      channel: "{{ incident_channel | default('') }}"
+      assigned_to: "{{ incident_assigned_to | default('') }}"
+      # Automation and CI fields
       cmdb_ci: "{{ ci_info.records[0].sys_id | default('') }}"
-      correlation_id: "{{ incident_correlation_id }}"
+      correlation_id: "{{ incident_correlation_id | default('') }}"
       work_notes: "{{ incident_work_notes | default('Created by Ansible automation') }}"
       u_automation_source: ansible
       u_device_hostname: "{{ inventory_hostname }}"
@@ -110,8 +113,8 @@
   set_fact:
     servicenow_incident_result:
       action: "{{ 'created' if existing_incidents.records | default([]) | length == 0 else 'updated' }}"
-      number: "{{ snow_incident_created.record.number if snow_incident_created is defined else existing_incidents.records[0].number }}"
-      sys_id: "{{ snow_incident_created.record.sys_id if snow_incident_created is defined else existing_incidents.records[0].sys_id }}"
+      number: "{{ snow_incident_created.record.number if snow_incident_created is defined and snow_incident_created.record is defined else existing_incidents.records[0].number }}"
+      sys_id: "{{ snow_incident_created.record.sys_id if snow_incident_created is defined and snow_incident_created.record is defined else existing_incidents.records[0].sys_id }}"
       ci_associated: "{{ ci_info.records | default([]) | length > 0 }}"
 
 - name: Display incident information

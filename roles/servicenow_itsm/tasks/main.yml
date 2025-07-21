@@ -1,0 +1,13 @@
+---
+# Purpose: ServiceNow ITSM automation wrapper for incidents, changes, and problems
+# Design Pattern: Multi-object ITSM handler with type-based routing
+
+- name: Validate required ITSM type
+  assert:
+    that:
+      - itsm_type is defined
+      - itsm_type in ['incident', 'change', 'problem']
+    fail_msg: "itsm_type is required and must be one of: incident, change, problem"
+
+- name: Route to appropriate ITSM handler
+  include_tasks: "{{ itsm_type }}.yml"
