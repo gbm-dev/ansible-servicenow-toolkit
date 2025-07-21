@@ -18,8 +18,10 @@
   tasks:
     - name: Force incident creation by simulating failed device check
       include_role:
-        name: servicenow_incident_creator
+        name: servicenow_itsm
       vars:
+        itsm_type: incident
+        incident_caller: "{{ servicenow_default_caller }}"
         incident_short_description: "[NETWORK] Device test-router-01 unreachable"
         incident_description: |
           Network Device Connectivity Failure
@@ -52,7 +54,3 @@
         incident_category: network
         incident_subcategory: connectivity
         incident_work_notes: "Test incident created by Ansible automation"
-        inventory_hostname: test-router-01
-        ansible_host: 192.168.1.99
-        device_type: cisco_ios
-        device_location: "Test Lab"

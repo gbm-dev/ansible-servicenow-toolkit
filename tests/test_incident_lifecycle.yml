@@ -28,8 +28,10 @@
             
         - name: Create incident for device failure
           include_role:
-            name: servicenow_incident_creator
+            name: servicenow_itsm
           vars:
+            itsm_type: incident
+            incident_caller: "{{ servicenow_default_caller }}"
             incident_short_description: "[NETWORK] Device {{ test_device }} unreachable"
             incident_description: |
               Network Device Connectivity Failure
@@ -50,8 +52,7 @@
             incident_impact: low
             incident_category: network
             incident_subcategory: connectivity
-            inventory_hostname: "{{ test_device }}"
-            ansible_host: "192.168.100.10"
+            incident_work_notes: "Test incident created by Ansible automation"
             
     - name: Wait before simulating recovery
       pause:
@@ -66,12 +67,22 @@
             
         - name: Close incident for recovered device
           include_role:
-            name: servicenow_incident_creator
+            name: servicenow_itsm
             tasks_from: close_incident
           vars:
             incident_correlation_id: "{{ test_correlation_id }}"
-            inventory_hostname: "{{ test_device }}"
-            ansible_host: "192.168.100.10"
+            incident_close_code: "Resolved by caller"
+            incident_close_notes: |
+              Device connectivity restored
+              
+              Resolution Details:
+              - Device: {{ test_device }} (192.168.100.10)
+              - Resolved Time: {{ ansible_date_time.iso8601 }}
+              - Resolution: Device is now responding to health checks
+              - Check Type: ICMP Ping Test
+              
+              Automated closure by Ansible test automation
+            incident_close_work_notes: "Device back online - automatically closing incident"
             
     - name: Summary
       debug:

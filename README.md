@@ -20,14 +20,15 @@ This project provides a comprehensive solution for monitoring network infrastruc
 
 ### 1. Test the Monitoring System
 ```bash
-# Test connectivity monitoring
-ansible-playbook -i examples/inventory.yml test_failed_device.yml
+# Use the test runner for easy testing
+cd tests/
+./run_tests.sh failed-device          # Test incident creation
+./run_tests.sh incident-lifecycle     # Test complete incident workflow
+./run_tests.sh change-request         # Test change request creation
+./run_tests.sh all                    # Run all tests
 
-# Test incident lifecycle (create and auto-close)
-ansible-playbook -i examples/inventory.yml test_incident_lifecycle.yml
-
-# Test change request creation
-ansible-playbook -i examples/inventory.yml test_change_request.yml
+# Or run tests manually
+ansible-playbook -i examples/inventory.yml tests/test_failed_device.yml
 ```
 
 ### 2. Setup Automated Scheduling
@@ -69,7 +70,9 @@ ansible-servicenow/
 │   ├── monitoring_role_factory.py  # Role discovery factory
 │   └── templates/              # Systemd service templates
 ├── examples/                   # Sample configurations
-├── tests/                      # Test playbooks
+├── tests/                      # Comprehensive test suite
+│   ├── run_tests.sh           # Test runner script
+│   └── README.md              # Test documentation
 └── documentation/              # Additional documentation
 ```
 
@@ -102,196 +105,91 @@ Monitoring roles follow a standardized pattern:
 
 ### Creating New Monitoring Roles
 
-See [Creating New Monitoring Roles Guide](documentation/CREATE_NEW_ROLE.md) for detailed instructions.
+See [Creating New Monitoring Roles Guide](documentation/CREATE_NEW_ROLE.md) for detailed step-by-step instructions.
 
-#### Quick Example: Security Monitoring Role
-
-1. **Create role structure**:
-```bash
-mkdir -p roles/security_scan/{defaults,tasks,templates,meta}
-```
-
-2. **Configure monitoring** (`roles/security_scan/defaults/main.yml`):
-```yaml
----
-# Security scan configuration
-security_scan_timeout: 300
-security_scan_ports: [22, 443, 80]
-
-# Monitoring scheduler configuration  
-monitoring_config:
-  enabled: true
-  role_type: security_monitoring
-  default_schedule: "0 */6 * * *"  # Every 6 hours
-  description: "Network device security scanning with vulnerability detection"
-  inventory_groups:
-    - network_devices
-    - security_critical
-  timeout: 600
-  retry_count: 2
-  playbook_args: "--limit={{inventory_group}} -e security_scan_timeout={{timeout}}"
-```
-
-3. **Implement monitoring logic** (`roles/security_scan/tasks/main.yml`):
-```yaml
----
-# Purpose: Network security scanning with ServiceNow integration
-# Design Pattern: Security monitoring with vulnerability detection
-
-- name: Security scan with incident lifecycle
-  block:
-    - name: Run security scan
-      # Your security scanning logic here
-      
-    - name: Close security incidents if no issues found
-      include_role:
-        name: servicenow_itsm
-        tasks_from: close_incident
-      vars:
-        incident_correlation_id: "security_scan_{{ inventory_hostname }}"
-      when: security_scan_passed
-      
-  rescue:
-    - name: Generate security incident content from templates
-      set_fact:
-        rendered_description: "{{ lookup('template', 'security_vulnerability_description.j2') }}"
-        rendered_work_notes: "{{ lookup('template', 'security_vulnerability_work_notes.j2') }}"
-
-    - name: Create ServiceNow incident for security issues
-      include_role:
-        name: servicenow_itsm
-      vars:
-        itsm_type: incident
-        incident_caller: "{{ security_incident_caller | default(servicenow_default_caller) }}"
-        incident_short_description: "[SECURITY] Vulnerability detected on {{ inventory_hostname }}"
-        incident_description: "{{ rendered_description }}"
-        incident_work_notes: "{{ rendered_work_notes }}"
-        incident_correlation_id: "security_scan_{{ inventory_hostname }}"
-        incident_urgency: high
-        incident_impact: high
-```
-
-4. **Auto-discovery**: The scheduler factory will automatically discover and schedule your new role!
+For a complete example of creating a new monitoring role, see the [Role Creation Guide](documentation/CREATE_NEW_ROLE.md) which includes:
+- Step-by-step setup instructions
+- Complete code examples with templates
+- Best practices and naming conventions  
+- Integration with the scheduler factory
 
 ## ServiceNow ITSM Integration
 
-### Supported ServiceNow Objects
+The `servicenow_itsm` role provides unified access to ServiceNow ITSM objects including incidents, change requests, and problem records. It features:
 
-The `servicenow_itsm` role supports multiple ServiceNow ITSM objects:
+- **Multi-object support**: Incidents, changes, and problems
+- **Field validation**: Required field checking with clear error messages
+- **Duplicate prevention**: Correlation-based deduplication
+- **CI association**: Automatic Configuration Item linking
+- **Template integration**: Works with Jinja2 template rendering
 
-#### Incidents
+### Quick Examples
+
+**Create Incident:**
 ```yaml
-- include_role:
-    name: servicenow_itsm
+- include_role: { name: servicenow_itsm }
   vars:
     itsm_type: incident
-    incident_caller: "admin"                    # Required
-    incident_short_description: "Device down"  # Required
-    incident_description: "{{ custom_desc }}"  # Optional
+    incident_caller: "admin"
+    incident_short_description: "Device connectivity failure"
 ```
 
-#### Change Requests
+**Create Change Request:**
 ```yaml
-- include_role:
-    name: servicenow_itsm
+- include_role: { name: servicenow_itsm }
   vars:
     itsm_type: change
-    change_type: normal                         # standard|normal|emergency
-    change_short_description: "Maintenance"    # Required
-    change_description: "{{ custom_desc }}"    # Required
+    change_type: normal
+    change_short_description: "Network maintenance"
+    change_description: "Scheduled firmware upgrade"
 ```
 
-#### Problem Records
-```yaml
-- include_role:
-    name: servicenow_itsm
-  vars:
-    itsm_type: problem
-    problem_short_description: "Recurring issue" # Required
-    problem_description: "{{ custom_desc }}"     # Required
-```
-
-### ServiceNow Field Requirements
-
-**Required Fields:**
-- **Incidents**: `incident_caller`, `incident_short_description`
-- **Changes**: `change_type`, `change_short_description`, `change_description`
-- **Problems**: `problem_short_description`, `problem_description`
-
-**Optional Fields with Defaults:**
-- `urgency`, `impact`, `priority`
-- `assignment_group`, `category`, `subcategory`
-- `work_notes`, `correlation_id`
-
-See [ServiceNow Integration Guide](documentation/SERVICENOW_INTEGRATION.md) for complete field reference.
+For complete field requirements, examples, and configuration details, see the [ServiceNow Integration Guide](documentation/SERVICENOW_INTEGRATION.md).
 
 ## Automated Scheduling System
 
-The project includes a sophisticated scheduling system that automatically discovers monitoring roles and creates systemd timers.
+The project includes a sophisticated factory-based scheduler that automatically discovers monitoring roles and creates systemd timers for production deployment.
 
-### Scheduler Features
-
-- **🔍 Automatic Discovery**: Finds monitoring roles without configuration
-- **⚙️ Systemd Integration**: Generates proper service and timer files
-- **🛡️ Security Hardening**: Isolated services with minimal privileges
+### Key Features
+- **🔍 Automatic Discovery**: Finds all monitoring-enabled roles
+- **⚙️ Systemd Integration**: Generates production-ready service files
+- **🛡️ Security Hardening**: Isolated execution with minimal privileges
 - **📊 Status Monitoring**: Real-time service status and logging
-- **🎯 Smart Naming**: Consistent systemd service naming conventions
 
-### Scheduler Usage
-
+### Quick Usage
 ```bash
-# Discover monitoring roles
-python3 scheduler.py discover
-
-# Show detailed role summary
-python3 scheduler.py summary
-
-# Create systemd timers (dry run)
-python3 scheduler.py create-timers --dry-run
-
-# Install production timers
-sudo python3 scheduler.py create-timers
-
-# Monitor service status
-python3 scheduler.py status
+cd scheduler/
+python3 scheduler.py discover          # Find monitoring roles
+python3 scheduler.py create-timers     # Deploy to production  
+python3 scheduler.py status            # Check service health
 ```
 
-For detailed scheduler documentation, see: [Scheduler Documentation](scheduler/README.md)
+For complete scheduler documentation including architecture, configuration, and troubleshooting, see: [Scheduler Documentation](scheduler/README.md)
 
 ## Configuration
 
-### Inventory Configuration
-
-Configure your network devices in `examples/inventory.yml`:
+### Inventory Setup
+Configure your network devices with proper asset tags for ServiceNow CI association:
 
 ```yaml
-all:
-  children:
-    network_devices:
-      children:
-        core_switches:
-          hosts:
-            core-sw-01:
-              ansible_host: 10.1.1.1
-              device_type: cisco_ios
-              device_location: "Datacenter A"
-              device_asset_tag: "P1000002"  # ServiceNow CI association
+# examples/inventory.yml
+core-sw-01:
+  ansible_host: 10.1.1.1
+  device_asset_tag: "P1000002"  # Links to ServiceNow CI
+  device_location: "Datacenter A"
 ```
 
-### ServiceNow Configuration
+### ServiceNow Credentials
+Store credentials securely in vault files:
 
-1. **Credentials** (in `group_vars/all/vault.yml`):
-```yaml
----
-vault_servicenow_host: "https://your-instance.service-now.com"
-vault_servicenow_username: "your-username"
-vault_servicenow_password: "your-password"
-```
-
-2. **Encrypt sensitive data**:
 ```bash
+# Configure ServiceNow instance details
+cp group_vars/all/vault.yml.example group_vars/all/vault.yml
+# Edit with your ServiceNow instance details
 ansible-vault encrypt group_vars/all/vault.yml
 ```
+
+For complete configuration details, see the [ServiceNow Integration Guide](documentation/SERVICENOW_INTEGRATION.md).
 
 ## How It Works
 
@@ -331,31 +229,28 @@ ServiceNow stores these correlation IDs and the system queries for existing reco
 
 ## Testing
 
-### Unit Tests
+Comprehensive test suite available in the `tests/` directory.
+
+### Quick Testing
 ```bash
-# Test individual components
-ansible-playbook test_connectivity.yml
-ansible-playbook test_servicenow.yml
-ansible-playbook test_asset_tag.yml
+cd tests/
+
+# Run specific tests
+./run_tests.sh connectivity          # Basic connectivity (no ServiceNow)
+./run_tests.sh validation-error     # Test field validation
+./run_tests.sh incident-lifecycle   # Complete incident workflow
+
+# Run all tests
+./run_tests.sh all
 ```
 
-### Integration Tests
-```bash
-# Test complete incident lifecycle
-ansible-playbook test_incident_lifecycle.yml
+### Test Categories
+- **Basic Tests**: Connectivity and ServiceNow integration
+- **Incident Tests**: Creation, closure, and lifecycle management
+- **ITSM Tests**: Change requests and problem records  
+- **Integration Tests**: Asset tag association and validation
 
-# Test change request workflow
-ansible-playbook test_change_request.yml
-
-# Test problem record creation
-ansible-playbook test_problem_record.yml
-```
-
-### Validation Tests
-```bash
-# Test required field validation
-ansible-playbook test_validation_error.yml
-```
+See [tests/README.md](tests/README.md) for complete test documentation.
 
 ## Production Deployment
 
@@ -448,15 +343,15 @@ journalctl -u device-uptime-monitor.service -f
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## Support
 
 For questions and support:
 - Review the [Troubleshooting Guide](documentation/TROUBLESHOOTING.md)
-- Check existing [Issues](../../issues)
+- Check project issues for known problems
 - Create a new issue with detailed information
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
+See git commit history for version updates and changes.

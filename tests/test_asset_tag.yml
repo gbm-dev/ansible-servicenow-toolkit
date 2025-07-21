@@ -18,8 +18,10 @@
   tasks:
     - name: Create incident associated with asset tag P1000002
       include_role:
-        name: servicenow_incident_creator
+        name: servicenow_itsm
       vars:
+        itsm_type: incident
+        incident_caller: "{{ servicenow_default_caller }}"
         incident_short_description: "[NETWORK] Device core-sw-03 unreachable"
         incident_description: |
           Network Device Connectivity Failure
@@ -55,7 +57,3 @@
         incident_subcategory: connectivity
         incident_work_notes: "Critical core switch failure - immediate attention required"
         incident_asset_tag: "P1000002"
-        inventory_hostname: core-sw-03
-        ansible_host: 10.1.1.3
-        device_type: cisco_ios
-        device_location: "Datacenter A"
