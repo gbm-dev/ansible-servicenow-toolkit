@@ -1,0 +1,40 @@
+[Unit]
+Description={{ role.description }}
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+User=ansible
+Group=ansible
+WorkingDirectory={{ ansible_project_path }}
+
+# Environment variables
+Environment="ANSIBLE_HOST_KEY_CHECKING=False"
+Environment="ANSIBLE_STDOUT_CALLBACK=json"
+Environment="ANSIBLE_LOG_PATH={{ log_path }}/{{ role.systemd_service_name }}.log"
+
+# Execute ansible-playbook for this role
+ExecStart=/usr/bin/ansible-playbook \
+    -i {{ inventory_file }} \
+    {{ playbook_file }} \
+    {{ role.playbook_args }} \
+    --timeout {{ role.timeout }}
+
+# Logging and output
+StandardOutput=append:{{ log_path }}/{{ role.systemd_service_name }}.log
+StandardError=append:{{ log_path }}/{{ role.systemd_service_name }}.error.log
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ ansible_project_path }} {{ log_path }}
+
+# Restart policy
+Restart=no
+TimeoutStartSec={{ role.timeout }}
+
+[Install]
+WantedBy=multi-user.target

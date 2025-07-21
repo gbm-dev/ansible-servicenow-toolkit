@@ -1,0 +1,19 @@
+[Unit]
+Description=Timer for {{ role.description }}
+Requires={{ role.systemd_service_name }}.service
+
+[Timer]
+# Schedule using cron format converted to systemd calendar format
+OnCalendar={{ systemd_calendar_format }}
+
+# Randomize start time to avoid thundering herd
+RandomizedDelaySec={{ randomized_delay | default(30) }}
+
+# Persistent timer (run missed executions on boot)
+Persistent=true
+
+# Accuracy for timer scheduling
+AccuracySec={{ accuracy_sec | default(10) }}
+
+[Install]
+WantedBy=timers.target
