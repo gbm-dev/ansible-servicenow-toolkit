@@ -1,0 +1,46 @@
+Network Topology Change Detection
+
+AUTOMATED TOPOLOGY ANALYSIS:
+Interface monitoring has detected changes in the network topology for {{ inventory_hostname }}.
+
+{% if interface_changes.new_interfaces | length > 0 %}
+NEW INTERFACES ({{ interface_changes.new_interfaces | length }}):
+{% for interface in interface_changes.new_interfaces %}
+- {{ interface }}
+  Status: {{ monitored_interfaces[interface].status }}
+  VLAN: {{ monitored_interfaces[interface].vlan | default('unassigned') }}
+  Speed: {{ monitored_interfaces[interface].speed | default('auto') }}
+  Duplex: {{ monitored_interfaces[interface].duplex | default('auto') }}
+  Type: {{ monitored_interfaces[interface].type | default('unknown') }}
+{% endfor %}
+{% endif %}
+
+{% if interface_changes.removed_interfaces | length > 0 %}
+REMOVED INTERFACES ({{ interface_changes.removed_interfaces | length }}):
+{% for interface in interface_changes.removed_interfaces %}
+- {{ interface }}
+  Previous Status: {{ previous_interfaces[interface].status }}
+  Previous VLAN: {{ previous_interfaces[interface].vlan | default('unassigned') }}
+  Previous Type: {{ previous_interfaces[interface].type | default('unknown') }}
+{% endfor %}
+{% endif %}
+
+CHANGE STATISTICS:
+- Interfaces Added: {{ interface_changes.new_interfaces | length }}
+- Interfaces Removed: {{ interface_changes.removed_interfaces | length }}
+- Current Interface Count: {{ monitored_interfaces | length }}
+- Previous Interface Count: {{ previous_interfaces | length if previous_interfaces is defined else 'N/A' }}
+
+MONITORING METADATA:
+- Device: {{ inventory_hostname }} ({{ ansible_host }})
+- Detection Time: {{ current_timestamp }}
+- Monitoring Method: Automated interface status comparison
+- State File: {{ interface_monitoring_storage_path }}/{{ inventory_hostname }}/interface-state.json
+
+NEXT STEPS:
+This problem requires manual review to:
+1. Confirm topology changes are authorized
+2. Update network documentation and diagrams  
+3. Validate connectivity and routing
+4. Update monitoring configurations if needed
+5. Close problem after review completion

@@ -5,6 +5,17 @@ servicenow_instance:
   username: "{{ servicenow_username }}"
   password: "{{ servicenow_password }}"
 
+# File attachment configuration
+# Usage examples:
+# incident_attachments:
+#   - path: "/path/to/logfile.txt"
+#     name: "device_logs.txt"
+#     content_type: "text/plain"
+# problem_attachments:
+#   - path: "/path/to/diagnostic.json"  
+#     name: "diagnostic_data.json"
+#     content_type: "application/json"
+
 # Default values for incident creation
 servicenow_incident_defaults:
   caller: "{{ servicenow_default_caller | default(vault_servicenow_default_caller) | default('ansible.automation') }}"

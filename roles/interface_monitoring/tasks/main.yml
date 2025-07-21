@@ -1,0 +1,266 @@
+---
+# Purpose: Monitor network interface status changes with ServiceNow incident and problem management
+# Design Pattern: Health monitoring with differential state analysis and ticket lifecycle management
+# Complexity: O(n) where n is the number of interfaces - linear comparison of interface states
+
+- name: Network interface monitoring with incident lifecycle management
+  block:
+    # Set current timestamp for metadata (ServiceNow role handles its own timestamps)
+    - name: Set current timestamp for monitoring metadata
+      set_fact:
+        current_timestamp: "{{ lookup('pipe', 'date -Iseconds') }}"
+      
+    # Create monitoring directory structure
+    - name: Ensure interface monitoring directory exists
+      ansible.builtin.file:
+        path: "{{ interface_monitoring_storage_path }}/{{ inventory_hostname }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: false
+
+    # Collect interface status using proper Ansible network modules
+    - name: Gather interface configuration and state (Cisco IOS)
+      cisco.ios.ios_interfaces:
+        state: gathered
+      register: interface_config_result
+      when: 
+        - ansible_network_os is defined 
+        - ansible_network_os == 'ios'
+
+    - name: Gather L3 interface configuration and state (Cisco IOS)
+      cisco.ios.ios_l3_interfaces:
+        state: gathered
+      register: l3_interface_result
+      when: 
+        - ansible_network_os is defined 
+        - ansible_network_os == 'ios'
+
+    # Process interface data into monitoring format
+    - name: Convert interface data to monitoring format
+      set_fact:
+        current_interfaces: "{{ current_interfaces | default({}) | combine({
+          item.name: {
+            'name': item.name,
+            'status': 'up' if (item.enabled | default(false)) else 'down',
+            'admin_enabled': item.enabled | default(false),
+            'description': item.description | default(''),
+            'mtu': item.mtu | default(1500),
+            'duplex': item.duplex | default('auto'),
+            'speed': item.speed | default('auto'),
+            'type': 'physical' if item.name.startswith(('GigabitEthernet', 'FastEthernet', 'Ethernet', 'TenGigabitEthernet')) else 'virtual'
+          }
+        }) }}"
+      loop: "{{ interface_config_result.gathered | default([]) }}"
+      when: interface_config_result is defined
+
+    # Add IP address information from L3 interfaces
+    - name: Add IP address information to interfaces
+      set_fact:
+        current_interfaces: "{{ current_interfaces | combine({
+          item.name: current_interfaces[item.name] | combine({
+            'ip_addresses': item.ipv4 | default([]) | map(attribute='address') | list,
+            'primary_ip': (item.ipv4[0].address | default('unassigned')) if (item.ipv4 | default([]) | length > 0) else 'unassigned',
+            'has_dhcp': (item.ipv4 | default([]) | selectattr('dhcp', 'defined') | list | length > 0)
+          })
+        }) }}"
+      loop: "{{ l3_interface_result.gathered | default([]) }}"
+      when: 
+        - l3_interface_result is defined
+        - item.name in current_interfaces
+
+    # Filter out ignored interface patterns
+    - name: Filter interfaces based on ignore patterns
+      set_fact:
+        filtered_interfaces: "{{ current_interfaces | dict2items | rejectattr('key', 'match', item) | list | items2dict }}"
+      loop: "{{ interface_monitoring_ignore_patterns }}"
+      when: 
+        - current_interfaces is defined
+        - interface_monitoring_ignore_patterns is defined
+
+    - name: Set final interface list
+      set_fact:
+        monitored_interfaces: "{{ filtered_interfaces | default(current_interfaces) }}"
+
+    # Check if previous interface state exists
+    - name: Check for existing interface state file
+      ansible.builtin.stat:
+        path: "{{ interface_monitoring_storage_path }}/{{ inventory_hostname }}/interface-state.json"
+      register: existing_interface_state
+      delegate_to: localhost
+
+    - name: Read existing interface state if available
+      ansible.builtin.slurp:
+        src: "{{ interface_monitoring_storage_path }}/{{ inventory_hostname }}/interface-state.json"
+      register: existing_state_file
+      delegate_to: localhost
+      when: existing_interface_state.stat.exists
+
+    - name: Set existing interface state fact
+      set_fact:
+        previous_interfaces: "{{ existing_state_file.content | b64decode | from_json }}"
+      when: existing_interface_state.stat.exists and existing_state_file is defined
+
+    # Analyze interface changes
+    - name: Analyze interface status changes
+      set_fact:
+        interface_changes: "{{ interface_changes | default({}) | combine({
+          'down_interfaces': [],
+          'up_interfaces': [], 
+          'new_interfaces': [],
+          'removed_interfaces': []
+        }) }}"
+
+    # Find interfaces that went down
+    - name: Identify interfaces that went down
+      set_fact:
+        interface_changes: "{{ interface_changes | combine({
+          'down_interfaces': interface_changes.down_interfaces + [item.key]
+        }) }}"
+      loop: "{{ monitored_interfaces | dict2items }}"
+      when:
+        - previous_interfaces is defined
+        - item.key in previous_interfaces
+        - previous_interfaces[item.key].status in ['connected', 'up', 'disabled']
+        - item.value.status in ['notconnect', 'down']
+        - previous_interfaces[item.key].status != item.value.status
+
+    # Find interfaces that came up  
+    - name: Identify interfaces that came up
+      set_fact:
+        interface_changes: "{{ interface_changes | combine({
+          'up_interfaces': interface_changes.up_interfaces + [item.key]
+        }) }}"
+      loop: "{{ monitored_interfaces | dict2items }}"
+      when:
+        - previous_interfaces is defined
+        - item.key in previous_interfaces
+        - previous_interfaces[item.key].status in ['notconnect', 'down']
+        - item.value.status in ['connected', 'up', 'disabled']
+        - previous_interfaces[item.key].status != item.value.status
+
+    # Find new interfaces
+    - name: Identify new interfaces
+      set_fact:
+        interface_changes: "{{ interface_changes | combine({
+          'new_interfaces': interface_changes.new_interfaces + [item.key]
+        }) }}"
+      loop: "{{ monitored_interfaces | dict2items }}"
+      when:
+        - previous_interfaces is defined
+        - item.key not in previous_interfaces
+
+    # Find removed interfaces
+    - name: Identify removed interfaces
+      set_fact:
+        interface_changes: "{{ interface_changes | combine({
+          'removed_interfaces': interface_changes.removed_interfaces + [item.key]
+        }) }}"
+      loop: "{{ previous_interfaces | dict2items }}"
+      when:
+        - previous_interfaces is defined
+        - item.key not in monitored_interfaces
+
+    # Save current interface state
+    - name: Save current interface state
+      ansible.builtin.copy:
+        content: "{{ monitored_interfaces | to_nice_json }}"
+        dest: "{{ interface_monitoring_storage_path }}/{{ inventory_hostname }}/interface-state.json"
+      delegate_to: localhost
+
+    - name: Save interface monitoring metadata
+      ansible.builtin.copy:
+        content: |
+          Monitoring Date: {{ current_timestamp }}
+          Device: {{ inventory_hostname }}
+          IP: {{ ansible_host }}
+          Total Interfaces: {{ monitored_interfaces | length }}
+          Changes Detected: {{ (interface_changes.down_interfaces | length) + (interface_changes.up_interfaces | length) + (interface_changes.new_interfaces | length) + (interface_changes.removed_interfaces | length) }}
+          Down Interfaces: {{ interface_changes.down_interfaces | length }}
+          Up Interfaces: {{ interface_changes.up_interfaces | length }}  
+          New Interfaces: {{ interface_changes.new_interfaces | length }}
+          Removed Interfaces: {{ interface_changes.removed_interfaces | length }}
+        dest: "{{ interface_monitoring_storage_path }}/{{ inventory_hostname }}/monitoring-info.txt"
+      delegate_to: localhost
+
+    # Handle interface down events (create incidents)
+    - name: Create incidents for interfaces that went down
+      include_tasks: handle_interface_down.yml
+      loop: "{{ interface_changes.down_interfaces }}"
+      loop_control:
+        loop_var: down_interface
+      when: 
+        - interface_changes.down_interfaces is defined
+        - interface_changes.down_interfaces | length > 0
+
+    # Handle interface up events (close incidents)
+    - name: Close incidents for interfaces that came up
+      include_tasks: handle_interface_up.yml
+      loop: "{{ interface_changes.up_interfaces }}"
+      loop_control:
+        loop_var: up_interface
+      when:
+        - interface_changes.up_interfaces is defined
+        - interface_changes.up_interfaces | length > 0
+
+    # Handle new/removed interfaces (create problems)
+    - name: Create problems for topology changes
+      include_tasks: handle_topology_change.yml
+      when:
+        - (interface_changes.new_interfaces is defined and interface_changes.new_interfaces | length > 0) or
+          (interface_changes.removed_interfaces is defined and interface_changes.removed_interfaces | length > 0)
+
+    # Log monitoring summary
+    - name: Log interface monitoring summary
+      ansible.builtin.debug:
+        msg: |
+          Interface monitoring completed for {{ inventory_hostname }}:
+          - Total interfaces monitored: {{ monitored_interfaces | length }}
+          - Interfaces down: {{ interface_changes.down_interfaces | join(', ') if interface_changes.down_interfaces | length > 0 else 'None' }}
+          - Interfaces up: {{ interface_changes.up_interfaces | join(', ') if interface_changes.up_interfaces | length > 0 else 'None' }}
+          - New interfaces: {{ interface_changes.new_interfaces | join(', ') if interface_changes.new_interfaces | length > 0 else 'None' }}
+          - Removed interfaces: {{ interface_changes.removed_interfaces | join(', ') if interface_changes.removed_interfaces | length > 0 else 'None' }}
+
+  rescue:
+    # Failure path - check for device unreachable incidents first
+    - name: Check for existing device unreachable incident
+      servicenow.itsm.incident_info:
+        instance:
+          host: "{{ servicenow_host }}"
+          username: "{{ servicenow_username }}"
+          password: "{{ servicenow_password }}"
+        sysparm_query: "correlation_id=device_connectivity_{{ inventory_hostname }}^state!=6^state!=7"
+      register: existing_connectivity_incident
+      delegate_to: localhost
+
+    # Only create interface monitoring failure incident if no device unreachable incident exists
+    - name: Create interface monitoring failure incident
+      block:
+        - name: Generate incident content from templates
+          set_fact:
+            rendered_description: "{{ lookup('template', 'interface_monitoring_failure_description.j2') }}"
+            rendered_work_notes: "{{ lookup('template', 'interface_monitoring_failure_work_notes.j2') }}"
+
+        - name: Create ServiceNow incident for interface monitoring failure
+          include_role:
+            name: servicenow_itsm
+          vars:
+            itsm_type: incident
+            incident_caller: "{{ interface_monitoring_incident_caller | default(servicenow_default_caller) | default('ansible.automation') }}"
+            incident_short_description: "[INTERFACE] Monitoring failed for {{ inventory_hostname }}"
+            incident_description: "{{ rendered_description }}"
+            incident_work_notes: "{{ rendered_work_notes }}"
+            incident_correlation_id: "interface_monitoring_{{ inventory_hostname }}"
+            incident_urgency: "{{ interface_monitoring_incident_urgency | default('medium') }}"
+            incident_impact: "{{ interface_monitoring_incident_impact | default('medium') }}"
+            incident_assignment_group: "{{ interface_monitoring_assignment_group | default('network.operations') }}"
+            incident_category: network
+            incident_subcategory: monitoring
+            incident_asset_tag: "{{ device_asset_tag | default(omit) }}"
+
+      when: existing_connectivity_incident.record is not defined or existing_connectivity_incident.record | length == 0
+
+    - name: Log skipped interface monitoring incident (device unreachable)
+      ansible.builtin.debug:
+        msg: "Skipping interface monitoring incident for {{ inventory_hostname }} - device unreachable incident already exists ({{ existing_connectivity_incident.record[0].number }})"
+      when: existing_connectivity_incident.record is defined and existing_connectivity_incident.record | length > 0

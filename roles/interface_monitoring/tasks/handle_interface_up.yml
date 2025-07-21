@@ -1,0 +1,22 @@
+---
+# Purpose: Handle interface up events by closing ServiceNow incidents
+# Design Pattern: Event-driven incident resolution with interface-specific correlation
+
+- name: Generate interface up incident closure content from templates
+  set_fact:
+    rendered_close_notes: "{{ lookup('template', 'interface_up_close_notes.j2') }}"
+    rendered_close_work_notes: "{{ lookup('template', 'interface_up_work_notes.j2') }}"
+
+- name: Close ServiceNow incident for interface up event
+  include_role:
+    name: servicenow_itsm
+    tasks_from: close_incident
+  vars:
+    incident_correlation_id: "interface_down_{{ inventory_hostname }}_{{ up_interface | regex_replace('[^a-zA-Z0-9]', '_') }}"
+    incident_close_code: "Resolved by caller"
+    incident_close_notes: "{{ rendered_close_notes }}"
+    incident_close_work_notes: "{{ rendered_close_work_notes }}"
+
+- name: Log interface up incident resolution
+  ansible.builtin.debug:
+    msg: "Interface up - resolved incident for {{ up_interface }} on {{ inventory_hostname }}"

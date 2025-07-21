@@ -63,6 +63,207 @@ Problem records identify root causes of recurring incidents.
     problem_root_cause_known: false
 ```
 
+## File Attachments
+
+The ServiceNow role supports attaching files to incidents, problems, and change requests. This feature allows you to include diagnostic logs, configuration files, screenshots, or any other relevant documentation.
+
+### Basic File Attachment
+
+Attach a single file to an incident:
+
+```yaml
+- include_role:
+    name: servicenow_itsm
+  vars:
+    itsm_type: incident
+    incident_caller: "admin"
+    incident_short_description: "Interface failure with logs"
+    incident_description: "Network interface has failed, diagnostic logs attached"
+    incident_correlation_id: "interface_failure_{{ inventory_hostname }}"
+    incident_attachments:
+      - path: "/tmp/interface_logs.txt"
+        name: "interface_diagnostic.txt"
+        content_type: "text/plain"
+```
+
+### Multiple File Attachments
+
+Attach multiple files with different content types:
+
+```yaml
+- include_role:
+    name: servicenow_itsm
+  vars:
+    itsm_type: incident
+    incident_caller: "admin"
+    incident_short_description: "System failure with diagnostics"
+    incident_description: "Multiple diagnostic files attached for analysis"
+    incident_correlation_id: "system_failure_{{ inventory_hostname }}"
+    incident_attachments:
+      - path: "/var/log/system.log"
+        name: "system_log.txt"
+        content_type: "text/plain"
+      - path: "/tmp/diagnostic_report.json"
+        name: "diagnostics.json"
+        content_type: "application/json"
+      - path: "/tmp/config_backup.conf"
+        name: "device_config.conf"
+        content_type: "text/plain"
+```
+
+### Problem Attachments
+
+Attach files to problem records:
+
+```yaml
+- include_role:
+    name: servicenow_itsm
+  vars:
+    itsm_type: problem
+    problem_short_description: "Recurring network issues"
+    problem_description: "Analysis data attached for root cause investigation"
+    problem_correlation_id: "network_recurring_{{ inventory_hostname }}"
+    problem_attachments:
+      - path: "/tmp/network_analysis.csv"
+        name: "network_trends.csv"
+        content_type: "text/csv"
+      - path: "/tmp/error_logs.txt"
+        name: "error_analysis.txt"
+        content_type: "text/plain"
+```
+
+### Change Request Attachments
+
+Attach implementation and backout documentation:
+
+```yaml
+- include_role:
+    name: servicenow_itsm
+  vars:
+    itsm_type: change
+    change_type: normal
+    change_short_description: "Network maintenance with documentation"
+    change_description: "Scheduled maintenance with detailed procedures"
+    change_correlation_id: "maintenance_{{ inventory_hostname }}"
+    change_attachments:
+      - path: "/tmp/implementation_plan.pdf"
+        name: "implementation_procedure.pdf"
+        content_type: "application/pdf"
+      - path: "/tmp/rollback_steps.txt"
+        name: "rollback_procedure.txt"
+        content_type: "text/plain"
+```
+
+### Attachment Parameters
+
+Each attachment supports the following parameters:
+
+- **`path`** (Required): Local file system path to the file
+- **`name`** (Optional): Name for the file in ServiceNow (defaults to basename of path)
+- **`content_type`** (Optional): MIME type for the file (defaults to "text/plain")
+
+### Supported Content Types
+
+Common content types for attachments:
+
+- **Text Files**: `text/plain`, `text/csv`, `text/html`
+- **Logs**: `text/plain`, `application/octet-stream`
+- **Configuration**: `text/plain`, `application/xml`
+- **JSON Data**: `application/json`
+- **Documents**: `application/pdf`, `application/msword`
+- **Images**: `image/png`, `image/jpeg`, `image/gif`
+- **Archives**: `application/zip`, `application/gzip`
+
+### File Validation
+
+The system automatically validates attachments:
+
+1. **File Existence**: Verifies files exist before upload
+2. **Access Permissions**: Checks read permissions on files
+3. **Upload Status**: Reports success/failure for each file
+4. **Error Handling**: Continues processing other attachments if one fails
+
+### Example: Interface Monitoring with Logs
+
+Real-world example from the interface monitoring role:
+
+```yaml
+# Collect diagnostic logs
+- name: Get interface diagnostics
+  cisco.ios.ios_command:
+    commands:
+      - "show interface {{ interface_name }}"
+      - "show logging | grep {{ interface_name }}"
+  register: interface_logs
+
+# Save logs to file
+- name: Save diagnostic data
+  copy:
+    content: |
+      Interface Diagnostic Report
+      Generated: {{ ansible_date_time.iso8601 }}
+      
+      === INTERFACE STATUS ===
+      {{ interface_logs.stdout[0] }}
+      
+      === INTERFACE LOGS ===
+      {{ interface_logs.stdout[1] }}
+    dest: "/tmp/{{ interface_name }}_diagnostics.txt"
+
+# Create incident with logs attached
+- name: Create incident with diagnostic attachment
+  include_role:
+    name: servicenow_itsm
+  vars:
+    itsm_type: incident
+    incident_caller: "network.automation"
+    incident_short_description: "[INTERFACE DOWN] {{ interface_name }} on {{ inventory_hostname }}"
+    incident_description: "Interface failure detected with diagnostic logs attached"
+    incident_correlation_id: "interface_down_{{ inventory_hostname }}_{{ interface_name }}"
+    incident_urgency: "high"
+    incident_impact: "medium"
+    incident_category: "network"
+    incident_subcategory: "connectivity"
+    incident_attachments:
+      - path: "/tmp/{{ interface_name }}_diagnostics.txt"
+        name: "{{ interface_name }}_diagnostic_logs.txt"
+        content_type: "text/plain"
+```
+
+### Attachment Status and Debugging
+
+The system provides detailed feedback on attachment processing:
+
+```yaml
+# After running servicenow_itsm role with attachments
+- name: Check attachment results
+  debug:
+    msg: |
+      Attachment Results:
+      {% for result in servicenow_attachment_results %}
+      - {{ result.attachment.name }}: {{ 'SUCCESS' if result.status == 201 else 'FAILED' }}
+      {% endfor %}
+```
+
+### Best Practices for Attachments
+
+1. **File Size**: Keep files under 100MB for optimal performance
+2. **Meaningful Names**: Use descriptive filenames in ServiceNow
+3. **Content Types**: Set appropriate MIME types for proper display
+4. **Security**: Don't attach files containing sensitive credentials
+5. **Cleanup**: Remove temporary files after successful upload
+6. **Error Handling**: Check attachment results and handle failures
+
+### Troubleshooting Attachments
+
+Common attachment issues and solutions:
+
+1. **File Not Found**: Verify file path and permissions
+2. **Upload Failed**: Check ServiceNow API permissions and network connectivity
+3. **Size Limit**: ServiceNow may reject large files
+4. **Content Type**: Some file types may be restricted by ServiceNow policy
+5. **Authentication**: Ensure ServiceNow user has attachment permissions
+
 ## Field Requirements
 
 ### Required Fields
@@ -464,3 +665,5 @@ Complete working examples are available in:
 - `test_change_request.yml` - Change management
 - `test_problem_record.yml` - Problem management
 - `test_validation_error.yml` - Error handling
+- `test_attachment.yml` - File attachment functionality
+- `test_interface_monitoring.yml` - Real-world interface monitoring with log attachments

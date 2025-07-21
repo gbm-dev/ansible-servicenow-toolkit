@@ -1,0 +1,22 @@
+---
+# Purpose: Device log collection role defaults for network device diagnostics
+# Design Pattern: Single responsibility pattern for log collection operations
+
+# Log collection configuration
+log_collection_timeout: 90
+log_collection_last_entries: 50
+
+# Storage configuration
+log_collection_storage_path: "/tmp/device-logs"
+
+# Log types to collect (can be customized per use case)
+log_collection_types:
+  - interface_status
+  - system_logs
+  - authentication_events
+  - configuration_changes
+
+# Context for log collection (set by calling role)
+log_collection_context: "general"
+log_collection_target_interface: ""
+log_collection_device: "{{ inventory_hostname }}"

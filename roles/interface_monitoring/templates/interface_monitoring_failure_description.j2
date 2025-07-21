@@ -1,0 +1,29 @@
+Interface monitoring failed for device {{ inventory_hostname }}.
+
+ERROR DETAILS:
+The automated interface monitoring process encountered an error and was unable to complete successfully.
+
+FAILURE INFORMATION:
+- Device: {{ inventory_hostname }} ({{ ansible_host }})
+- Monitoring Timestamp: {{ current_timestamp }}
+- Error: {{ ansible_failed_result.msg | default('Unknown error occurred during interface monitoring') }}
+
+POTENTIAL CAUSES:
+- Network device unreachable
+- Authentication failure
+- Command execution timeout
+- Insufficient privileges
+- Device configuration issues
+
+IMPACT:
+Interface status changes may go undetected until monitoring is restored.
+
+REQUIRED ACTIONS:
+1. Verify device connectivity
+2. Check authentication credentials
+3. Validate device access permissions
+4. Review device logs for errors
+5. Test interface monitoring manually
+6. Restore automated monitoring
+
+This incident should be investigated promptly to ensure continuous network monitoring coverage.

@@ -1,0 +1,73 @@
+---
+# Purpose: Collect interface-specific diagnostic logs from Cisco IOS devices
+# Design Pattern: Context-specific log collection with structured output
+
+- name: Collect interface diagnostic logs (Cisco IOS)
+  cisco.ios.ios_command:
+    commands:
+      # Interface status and configuration
+      - "show interface {{ log_collection_target_interface }}"
+      - "show interface {{ log_collection_target_interface }} switchport"
+      # Recent system logs
+      - "show logging last {{ log_collection_last_entries }}"
+      # Interface-specific logs
+      - "show logging | include {{ log_collection_target_interface }}"
+      # Configuration changes
+      - "show logging | include CONFIG"
+      # Authentication events
+      - "show logging | include LOGIN"
+  register: device_logs
+  timeout: "{{ log_collection_timeout }}"
+  ignore_errors: true
+  when: 
+    - ansible_network_os is defined 
+    - ansible_network_os == 'ios'
+    - log_collection_target_interface is defined
+    - log_collection_target_interface != ""
+
+- name: Generate interface diagnostic log file
+  ansible.builtin.copy:
+    content: |
+      Interface {{ log_collection_target_interface }} Diagnostic Report
+      =============================================================
+      Generated: {{ log_collection_timestamp }}
+      Device: {{ log_collection_device }} ({{ ansible_host }})
+      Context: {{ log_collection_context }}
+      
+      {% if device_logs.stdout is defined and device_logs.stdout | length > 0 and device_logs.stdout[0] %}
+      === INTERFACE STATUS DETAILS ===
+      {{ device_logs.stdout[0] }}
+      
+      {% endif %}
+      {% if device_logs.stdout is defined and device_logs.stdout | length > 1 and device_logs.stdout[1] %}
+      === SWITCHPORT CONFIGURATION ===
+      {{ device_logs.stdout[1] }}
+      
+      {% endif %}
+      {% if device_logs.stdout is defined and device_logs.stdout | length > 2 and device_logs.stdout[2] %}
+      === RECENT SYSTEM LOGS (Last {{ log_collection_last_entries }} entries) ===
+      {{ device_logs.stdout[2] }}
+      
+      {% endif %}
+      {% if device_logs.stdout is defined and device_logs.stdout | length > 3 and device_logs.stdout[3] %}
+      === INTERFACE-SPECIFIC LOG ENTRIES ===
+      {{ device_logs.stdout[3] }}
+      
+      {% endif %}
+      {% if device_logs.stdout is defined and device_logs.stdout | length > 4 and device_logs.stdout[4] %}
+      === CONFIGURATION CHANGE LOGS ===
+      {{ device_logs.stdout[4] }}
+      
+      {% endif %}
+      {% if device_logs.stdout is defined and device_logs.stdout | length > 5 and device_logs.stdout[5] %}
+      === AUTHENTICATION EVENTS ===
+      {{ device_logs.stdout[5] }}
+      
+      {% endif %}
+    dest: "{{ log_collection_storage_path }}/{{ log_collection_device }}/{{ log_collection_target_interface | regex_replace('[^a-zA-Z0-9]', '_') }}_diagnostic_logs.txt"
+  delegate_to: localhost
+  when: device_logs is defined
+
+- name: Set log output file path
+  set_fact:
+    log_output_file_path: "{{ log_collection_storage_path }}/{{ log_collection_device }}/{{ log_collection_target_interface | regex_replace('[^a-zA-Z0-9]', '_') }}_diagnostic_logs.txt"

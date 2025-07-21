@@ -1,0 +1,47 @@
+---
+# Test config backup role with real DevNet device
+
+- name: Test Configuration Backup Role with Real Device
+  hosts: devnet-cat9k-01
+  gather_facts: yes
+  
+  vars_files:
+    - ../group_vars/all/vault.yml
+    
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+    # Test configuration storage
+    config_backup_storage_path: "/tmp/devnet-config-backups"
+    
+  tasks:
+    - name: Test connectivity to DevNet device
+      ansible.builtin.ping:
+      
+    - name: Run config backup role on real device
+      include_role:
+        name: config_backup
+        
+    - name: Check backup was created
+      ansible.builtin.stat:
+        path: "{{ config_backup_storage_path }}/{{ inventory_hostname }}/running-config.txt"
+      register: backup_check
+      delegate_to: localhost
+      
+    - name: Display backup info
+      debug:
+        msg: |
+          DevNet Config Backup Test Complete!
+          
+          Device: {{ inventory_hostname }}
+          Backup Created: {{ 'YES' if backup_check.stat.exists else 'NO' }}
+          Backup Path: {{ config_backup_storage_path }}/{{ inventory_hostname }}/
+          
+          Check ServiceNow for any incidents if backup failed.

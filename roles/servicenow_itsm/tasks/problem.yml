@@ -16,9 +16,16 @@
     fail_msg: "assigned_to is required when problem state is not 'new'"
   when: problem_state is defined and problem_state not in ['new']
 
-- name: Set problem creation timestamp
+- name: Set problem creation timestamp from trusted localhost
   set_fact:
-    problem_timestamp: "{{ ansible_date_time.epoch }}"
+    problem_timestamp: "{{ hostvars['localhost']['ansible_date_time']['epoch'] }}"
+    ansible_date_time:
+      iso8601: "{{ hostvars['localhost']['ansible_date_time']['iso8601'] }}"
+      epoch: "{{ hostvars['localhost']['ansible_date_time']['epoch'] }}"
+      date: "{{ hostvars['localhost']['ansible_date_time']['date'] }}"
+      time: "{{ hostvars['localhost']['ansible_date_time']['time'] }}"
+  delegate_to: localhost
+  run_once: true
 
 - name: Check for existing problems to prevent duplicates
   servicenow.itsm.problem_info:
@@ -116,6 +123,17 @@
       sys_id: "{{ snow_problem_created.record.sys_id if snow_problem_created is defined and snow_problem_created.record is defined else existing_problems.records[0].sys_id }}"
       ci_associated: "{{ ci_info.records | default([]) | length > 0 }}"
       state: "{{ problem_state | default('new') }}"
+
+# Handle file attachments to the problem
+- name: Process problem attachments
+  include_tasks: attach_files.yml
+  vars:
+    attachment_table_name: problem
+    attachment_record_sys_id: "{{ servicenow_problem_result.sys_id }}"
+  when: 
+    - problem_attachments is defined
+    - problem_attachments | length > 0
+    - servicenow_problem_result.sys_id is defined
 
 - name: Display problem information
   debug:

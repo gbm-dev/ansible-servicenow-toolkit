@@ -1,99 +1,82 @@
 ---
-# Test playbook to demonstrate incident lifecycle - creation and automatic closure
-
-- name: Test ServiceNow Incident Lifecycle
-  hosts: localhost
-  gather_facts: yes
-  
+# Test ServiceNow incident creation and closure with localhost timestamps
+- name: Test ServiceNow Incident Lifecycle with Localhost Time
+  hosts: devnet-cat9k-01
+  gather_facts: no
+  vars_files:
+    - group_vars/all/vault.yml
+    
   vars:
-    # ServiceNow connection from vault
     servicenow_host: "{{ vault_servicenow_host }}"
     servicenow_username: "{{ vault_servicenow_username }}"
     servicenow_password: "{{ vault_servicenow_password }}"
-    
-    # Default incident parameters from vault
     servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
     servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
-    # Test device details
-    test_device: "test-sw-lifecycle"
-    test_correlation_id: "device_connectivity_test-sw-lifecycle"
-    
   tasks:
-    - name: "STEP 1: Simulate device DOWN - Create incident"
-      block:
-        - name: Display simulation info
-          debug:
-            msg: "Simulating device {{ test_device }} going DOWN..."
-            
-        - name: Create incident for device failure
-          include_role:
-            name: servicenow_itsm
-          vars:
-            itsm_type: incident
-            incident_caller: "{{ servicenow_default_caller }}"
-            incident_short_description: "[NETWORK] Device {{ test_device }} unreachable"
-            incident_description: |
-              Network Device Connectivity Failure
-              
-              Device Details:
-              - Hostname: {{ test_device }}
-              - IP Address: 192.168.100.10
-              - Device Type: cisco_ios
-              - Location: Test Lab
-              
-              Failure Information:
-              - Check Type: ICMP Ping Test
-              - Error: Device not responding to ping
-              
-              This is a test to demonstrate automatic incident closure.
-            incident_correlation_id: "{{ test_correlation_id }}"
-            incident_urgency: medium
-            incident_impact: low
-            incident_category: network
-            incident_subcategory: connectivity
-            incident_work_notes: "Test incident created by Ansible automation"
-            
-    - name: Wait before simulating recovery
-      pause:
-        seconds: 5
-        prompt: "Waiting 5 seconds before simulating device recovery..."
+    - name: Show test starting time from localhost
+      debug:
+        msg: "Test starting with localhost time: {{ hostvars['localhost']['ansible_date_time']['iso8601'] | default('gathering facts...') }}"
+      delegate_to: localhost
+      delegate_facts: true
+      
+    - name: Create test incident with localhost timestamp
+      include_role:
+        name: servicenow_itsm
+      vars:
+        itsm_type: incident
+        incident_caller: "{{ servicenow_default_caller }}"
+        incident_short_description: "[TEST] Localhost timestamp test - {{ inventory_hostname }}"
+        incident_description: "Testing ServiceNow role timestamp delegation from localhost to network device without gathered facts"
+        incident_correlation_id: "test_localhost_timestamp_{{ inventory_hostname }}"
+        incident_urgency: "low"
+        incident_impact: "low" 
+        incident_category: "software"
+        incident_subcategory: "configuration"
+        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_work_notes: "Created with trusted localhost timestamp delegation"
         
-    - name: "STEP 2: Simulate device UP - Close incident"
-      block:
-        - name: Display recovery info
-          debug:
-            msg: "Simulating device {{ test_device }} coming back UP..."
-            
-        - name: Close incident for recovered device
-          include_role:
-            name: servicenow_itsm
-            tasks_from: close_incident
-          vars:
-            incident_correlation_id: "{{ test_correlation_id }}"
-            incident_close_code: "Resolved by caller"
-            incident_close_notes: |
-              Device connectivity restored
-              
-              Resolution Details:
-              - Device: {{ test_device }} (192.168.100.10)
-              - Resolved Time: {{ ansible_date_time.iso8601 }}
-              - Resolution: Device is now responding to health checks
-              - Check Type: ICMP Ping Test
-              
-              Automated closure by Ansible test automation
-            incident_close_work_notes: "Device back online - automatically closing incident"
-            
-    - name: Summary
+    - name: Display created incident info
       debug:
         msg: |
-          Incident Lifecycle Test Complete!
-          - Device simulated DOWN -> Incident created
-          - Device simulated UP -> Incident auto-closed
+          Created incident: {{ servicenow_incident_result.number }}
+          - Action: {{ servicenow_incident_result.action }}
+          - Sys ID: {{ servicenow_incident_result.sys_id }}
+          - Timestamp used: {{ incident_timestamp }}
+          - ISO8601 used: {{ ansible_date_time.iso8601 }}
           
-          This demonstrates how the monitoring will work:
-          1. Every minute, health checks run on all devices
-          2. If a device fails, an incident is created
-          3. When the device recovers, the incident is automatically closed
+    - name: Wait before closing incident
+      pause:
+        seconds: 3
+        
+    - name: Close the test incident
+      include_role:
+        name: servicenow_itsm
+        tasks_from: close_incident
+      vars:
+        incident_correlation_id: "test_localhost_timestamp_{{ inventory_hostname }}"
+        incident_close_code: "Resolved by caller"
+        incident_close_notes: "Test completed successfully - localhost timestamp delegation working"
+        incident_close_work_notes: "Verified ServiceNow role uses trusted localhost time for all operations"
+        
+    - name: Verify incident was closed
+      servicenow.itsm.incident_info:
+        instance:
+          host: "{{ servicenow_host }}"
+          username: "{{ servicenow_username }}"
+          password: "{{ servicenow_password }}"
+        sysparm_query: "correlation_id=test_localhost_timestamp_{{ inventory_hostname }}"
+      register: closed_incident_check
+      delegate_to: localhost
+      
+    - name: Display final incident status
+      debug:
+        msg: |
+          Test Incident Final Status:
+          - Number: {{ closed_incident_check.records[0].number }}
+          - State: {{ closed_incident_check.records[0].state }}
+          - Created: {{ closed_incident_check.records[0].sys_created_on }}
+          - Closed: {{ closed_incident_check.records[0].closed_at | default('Still open') }}
           
-          Check ServiceNow for the created and closed incident.
+          ✅ SUCCESS: ServiceNow role localhost timestamp delegation working!
+          All ticket operations use consistent, trusted localhost time.

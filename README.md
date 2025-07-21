@@ -16,45 +16,26 @@ This project provides a comprehensive solution for monitoring network infrastruc
 - **🛡️ Duplicate Prevention**: Correlation-based incident deduplication
 - **📊 CMDB Integration**: Automatic Configuration Item (CI) association
 
-## Quick Start
+## Quick Setup
 
-### 1. Test the Monitoring System
-```bash
-# Use the test runner for easy testing
-cd tests/
-./run_tests.sh failed-device          # Test incident creation
-./run_tests.sh incident-lifecycle     # Test complete incident workflow
-./run_tests.sh change-request         # Test change request creation
-./run_tests.sh all                    # Run all tests
+1. **Copy and configure vault file:**
+   ```bash
+   cp group_vars/all/vault.yml.example group_vars/all/vault.yml
+   # Edit vault.yml with your ServiceNow credentials
+   ansible-vault encrypt group_vars/all/vault.yml
+   ```
 
-# Or run tests manually
-ansible-playbook -i examples/inventory.yml tests/test_failed_device.yml
-```
+2. **Install dependencies:**
+   ```bash
+   ansible-galaxy collection install servicenow.itsm cisco.ios community.general
+   ```
 
-### 2. Setup Automated Scheduling
-```bash
-# Discover available monitoring roles
-cd scheduler/
-python3 scheduler.py discover
-
-# Create systemd timers (dry run first)
-python3 scheduler.py create-timers --dry-run
-
-# Install systemd timers for production
-sudo python3 scheduler.py create-timers --inventory ../examples/inventory.yml
-
-# Check service status
-python3 scheduler.py status
-```
-
-### 3. Configure Your Environment
-```bash
-# Encrypt sensitive data
-./encrypt_vault.sh
-
-# Run production monitoring setup
-./monitoring_setup.sh
-```
+3. **Run tests:**
+   ```bash
+   cd tests
+   ansible-playbook test_servicenow.yml
+   ansible-playbook test_interface.yml
+   ```
 
 ## Architecture
 
@@ -179,15 +160,15 @@ core-sw-01:
   device_location: "Datacenter A"
 ```
 
-### ServiceNow Credentials
-Store credentials securely in vault files:
+## Required Vault Variables
 
-```bash
-# Configure ServiceNow instance details
-cp group_vars/all/vault.yml.example group_vars/all/vault.yml
-# Edit with your ServiceNow instance details
-ansible-vault encrypt group_vars/all/vault.yml
-```
+Configure these in `group_vars/all/vault.yml`:
+
+- `vault_servicenow_host` - Your ServiceNow instance URL
+- `vault_servicenow_username` - ServiceNow API username  
+- `vault_servicenow_password` - ServiceNow API password
+- `vault_servicenow_default_caller` - Default incident caller
+- `vault_servicenow_default_assignment_group` - Default assignment group
 
 For complete configuration details, see the [ServiceNow Integration Guide](documentation/SERVICENOW_INTEGRATION.md).
 

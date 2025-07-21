@@ -1,0 +1,50 @@
+---
+# Staging Inventory for Testing ServiceNow ITSM Integration
+# This inventory uses sandbox/lab devices for testing
+
+all:
+  children:
+    network_devices:
+      children:
+        lab_switches:
+          hosts:
+            devnet-cat9k-01:
+              ansible_host: sandbox-iosxe-recomm-1.cisco.com
+              ansible_network_os: ios
+              ansible_user: developer
+              ansible_password: "{{ vault_devnet_password | default('C1sco12345') }}"
+              device_asset_tag: "LAB001"
+              device_location: "DevNet Sandbox"
+              device_role: "Lab Switch"
+              
+    # All staging devices are considered standard priority
+    standard_devices:
+      hosts:
+        devnet-cat9k-01:
+      vars:
+        monitoring_priority: normal
+        connectivity_check_interval: "*/10 * * * *"  # Every 10 minutes for testing
+        interface_check_interval: "*/15 * * * *"     # Every 15 minutes for testing
+
+  vars:
+    # ServiceNow Configuration (same as production but different instance)
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+    # Network Device Configuration
+    ansible_connection: ansible.netcommon.network_cli
+    ansible_command_timeout: 60
+    ansible_connect_timeout: 30
+    
+    # Monitoring Configuration (more verbose for staging)
+    monitoring_enabled: true
+    log_collection_enabled: true
+    config_backup_enabled: true
+    
+    # Storage Paths (separate from production)
+    monitoring_storage_base: "/tmp/ansible-staging"
+    backup_storage_path: "/tmp/ansible-staging/backups"
+    log_storage_path: "/tmp/ansible-staging/logs"

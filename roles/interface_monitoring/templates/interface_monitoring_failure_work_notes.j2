@@ -1,0 +1,37 @@
+Interface Monitoring Failure
+
+MONITORING SYSTEM ALERT:
+Automated interface monitoring has failed for {{ inventory_hostname }}.
+
+FAILURE DETAILS:
+- Target Device: {{ inventory_hostname }} ({{ ansible_host }})
+- Failure Time: {{ current_timestamp }}
+- Connection Method: {{ ansible_connection | default('network_cli') }}
+- Network OS: {{ ansible_network_os | default('generic') }}
+
+ERROR INFORMATION:
+{{ ansible_failed_result.msg | default('No detailed error message available') }}
+
+{% if ansible_failed_result.stdout is defined %}
+COMMAND OUTPUT:
+{{ ansible_failed_result.stdout }}
+{% endif %}
+
+{% if ansible_failed_result.stderr is defined %}
+ERROR OUTPUT:
+{{ ansible_failed_result.stderr }}
+{% endif %}
+
+MONITORING CONFIGURATION:
+- Storage Path: {{ interface_monitoring_storage_path }}/{{ inventory_hostname }}
+- Timeout: {{ interface_monitoring_timeout | default(60) }} seconds
+- Schedule: {{ monitoring_config.default_schedule | default('*/15 * * * *') }}
+
+TROUBLESHOOTING STEPS:
+1. Verify device {{ inventory_hostname }} is reachable from automation host
+2. Confirm authentication credentials are valid
+3. Check device SSH/NETCONF access
+4. Validate interface monitoring commands work manually
+5. Review device configuration for access restrictions
+
+This incident will prevent interface change detection until resolved.

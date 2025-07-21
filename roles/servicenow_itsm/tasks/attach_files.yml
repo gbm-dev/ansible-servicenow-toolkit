@@ -1,0 +1,54 @@
+---
+# Purpose: Attach files to ServiceNow records (incidents, problems, changes)
+# Design Pattern: File attachment management with error handling and validation
+
+- name: Validate attachment file exists
+  ansible.builtin.stat:
+    path: "{{ attachment.path }}"
+  register: attachment_file_check
+  delegate_to: localhost
+  loop: "{{ incident_attachments | default([]) + problem_attachments | default([]) + change_attachments | default([]) }}"
+  loop_control:
+    loop_var: attachment
+    label: "{{ attachment.name | default(attachment.path | basename) }}"
+
+- name: Attach files to ServiceNow record
+  uri:
+    url: "{{ servicenow_host }}/api/now/attachment/file?table_name={{ attachment_table_name }}&table_sys_id={{ attachment_record_sys_id }}&file_name={{ attachment.name | default(attachment.path | basename) }}"
+    method: POST
+    headers:
+      Authorization: "Basic {{ (servicenow_username + ':' + servicenow_password) | b64encode }}"
+      Content-Type: "{{ attachment.content_type | default('text/plain') }}"
+    src: "{{ attachment.path }}"
+    status_code: 201
+  register: attachment_upload_result
+  delegate_to: localhost
+  loop: "{{ incident_attachments | default([]) + problem_attachments | default([]) + change_attachments | default([]) }}"
+  loop_control:
+    loop_var: attachment
+    index_var: attachment_index
+    label: "{{ attachment.name | default(attachment.path | basename) }}"
+  when: 
+    - attachment_file_check.results[attachment_index] is defined
+    - attachment_file_check.results[attachment_index].stat.exists
+  ignore_errors: true
+
+- name: Set attachment results facts
+  set_fact:
+    servicenow_attachment_results: "{{ attachment_upload_result.results | default([]) }}"
+    
+- name: Log attachment upload results  
+  ansible.builtin.debug:
+    msg: |
+      File Attachment Results:
+      {% for result in attachment_upload_result.results | default([]) %}
+      {% if result.status is defined %}
+      - {{ result.attachment.name | default(result.attachment.path | basename) }}: {{ 'SUCCESS' if result.status == 201 else 'FAILED (' + result.status|string + ')' }}
+      {% if result.status != 201 and result.msg is defined %}
+        Error: {{ result.msg }}
+      {% endif %}
+      {% else %}
+      - {{ result.attachment.name | default(result.attachment.path | basename) }}: SKIPPED (file not found)
+      {% endif %}
+      {% endfor %}
+  when: attachment_upload_result.results is defined and attachment_upload_result.results | length > 0

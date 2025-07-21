@@ -1,0 +1,32 @@
+---
+# Configuration backup with change detection and ServiceNow integration  
+- name: Network Device Configuration Backup
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook scheduling configuration
+    playbook_schedule:
+      enabled: true
+      schedule: "0 2 * * *"  # Daily at 2 AM
+      description: "Network device configuration backup with change detection"
+      inventory_groups:
+        - network_devices
+  
+  pre_tasks:
+    - name: Ensure backup storage directory exists
+      ansible.builtin.file:
+        path: "{{ config_backup_storage_path | default('/var/lib/ansible/backups') }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+    
+  tasks:
+    - name: Run configuration backup with change detection
+      include_role:
+        name: config_backup
+      tags:
+        - backup
+        - configuration
+        - servicenow

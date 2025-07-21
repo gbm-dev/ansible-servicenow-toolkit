@@ -1,0 +1,37 @@
+---
+# Purpose: Interface monitoring role defaults for network interface status tracking
+# Design Pattern: Health monitoring with differential state analysis
+
+# Default scheduling configuration (for playbook inheritance)
+default_schedule_config:
+  schedule: "*/15 * * * *"  # Every 15 minutes
+  description: "Network interface status monitoring with ServiceNow incident management"
+  inventory_groups:
+    - network_devices
+    - core_switches
+    - access_switches
+
+# Storage configuration
+interface_monitoring_storage_path: "/var/lib/ansible/interface-monitoring"
+
+# Interface monitoring settings
+interface_monitoring_timeout: 60
+
+# ServiceNow incident configuration for interface down events
+interface_down_incident_caller: "{{ servicenow_default_caller | default('ansible.automation') }}"
+interface_down_incident_urgency: "high"
+interface_down_incident_impact: "medium" 
+interface_down_assignment_group: "network.operations"
+
+# ServiceNow problem configuration for new/removed interfaces
+interface_change_problem_caller: "{{ servicenow_default_caller | default('ansible.automation') }}"
+interface_change_problem_urgency: "medium"
+interface_change_problem_impact: "low"
+interface_change_assignment_group: "network.operations"
+
+# Interface monitoring behavior
+interface_monitoring_track_admin_down: false  # Track administratively down interfaces
+interface_monitoring_ignore_patterns:  # Interface patterns to ignore
+  - "Null*"
+  - "Loopback*"
+  - "Embedded-Service-Engine*"

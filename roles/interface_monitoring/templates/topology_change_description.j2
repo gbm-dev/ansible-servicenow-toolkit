@@ -1,0 +1,39 @@
+Network topology changes detected on device {{ inventory_hostname }}.
+
+TOPOLOGY CHANGE SUMMARY:
+{% if interface_changes.new_interfaces | length > 0 %}
+NEW INTERFACES DETECTED:
+{% for interface in interface_changes.new_interfaces %}
+- {{ interface }} (Status: {{ monitored_interfaces[interface].status }}, VLAN: {{ monitored_interfaces[interface].vlan | default('unassigned') }}, Type: {{ monitored_interfaces[interface].type | default('unknown') }})
+{% endfor %}
+{% endif %}
+
+{% if interface_changes.removed_interfaces | length > 0 %}
+REMOVED INTERFACES DETECTED:
+{% for interface in interface_changes.removed_interfaces %}
+- {{ interface }} (Previous Status: {{ previous_interfaces[interface].status }}, VLAN: {{ previous_interfaces[interface].vlan | default('unassigned') }})
+{% endfor %}
+{% endif %}
+
+DEVICE INFORMATION:
+- Hostname: {{ inventory_hostname }}
+- IP Address: {{ ansible_host }}
+- Total Current Interfaces: {{ monitored_interfaces | length }}
+- Monitoring Timestamp: {{ current_timestamp }}
+
+IMPACT ASSESSMENT:
+Network topology changes may indicate:
+- Hardware modifications
+- Configuration changes  
+- Physical port additions/removals
+- Module installations/removals
+
+REQUIRED ACTIONS:
+1. Verify changes are authorized
+2. Update network documentation
+3. Validate network connectivity
+4. Update monitoring baselines
+5. Confirm security implications
+
+AUTOMATION SOURCE:
+This problem was automatically created by Ansible interface monitoring to ensure topology changes are reviewed and documented.

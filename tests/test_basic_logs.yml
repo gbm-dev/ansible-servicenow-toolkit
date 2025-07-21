@@ -1,0 +1,15 @@
+---
+- name: Test Basic Syslog Commands
+  hosts: devnet-cat9k-01
+  gather_facts: no
+  
+  tasks:
+    - name: Test basic logging commands
+      cisco.ios.ios_command:
+        commands:
+          - "show logging last 10"
+      register: basic_logs
+      
+    - name: Display basic log output
+      debug:
+        msg: "{{ basic_logs.stdout[0] }}"

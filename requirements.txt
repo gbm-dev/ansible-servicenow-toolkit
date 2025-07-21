@@ -1,0 +1,26 @@
+# Python requirements for Ansible ServiceNow automation project
+
+# Core Ansible requirements
+ansible
+ansible-core
+
+# SSH connectivity libraries
+paramiko
+sshpass
+
+# Additional network automation libraries
+ansible-pylibssh
+netmiko
+
+# ServiceNow integration
+requests
+urllib3
+
+# Template and data processing
+jinja2
+pyyaml
+
+# Collections that may need additional dependencies
+# These are installed via ansible-galaxy, but may have Python deps
+cryptography
+lxml

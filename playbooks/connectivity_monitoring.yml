@@ -1,0 +1,25 @@
+---
+# Device uptime/connectivity monitoring with ServiceNow incident management
+- name: Network Device Connectivity Monitoring
+  hosts: network_devices
+  gather_facts: no
+  
+  vars:
+    # Playbook scheduling configuration
+    playbook_schedule:
+      enabled: true
+      schedule: "*/5 * * * *"  # Every 5 minutes
+      description: "Device connectivity monitoring with ServiceNow integration"
+      inventory_groups:
+        - network_devices
+        - core_switches
+        - routers
+    
+  tasks:
+    - name: Run device uptime monitoring
+      include_role:
+        name: device_uptime
+      tags:
+        - monitoring
+        - connectivity
+        - servicenow

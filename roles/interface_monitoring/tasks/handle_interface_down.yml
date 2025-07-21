@@ -1,0 +1,48 @@
+---
+# Purpose: Handle interface down events by creating ServiceNow incidents with log attachments
+# Design Pattern: Event-driven incident management with interface-specific correlation and evidence collection
+
+- name: Collect interface diagnostic logs using log collection role
+  include_role:
+    name: device_log_collection
+  vars:
+    log_collection_context: "interface"
+    log_collection_target_interface: "{{ down_interface }}"
+    log_collection_storage_path: "{{ interface_monitoring_storage_path }}"
+    log_collection_device: "{{ inventory_hostname }}"
+
+- name: Generate interface down incident content from templates
+  set_fact:
+    rendered_description: "{{ lookup('template', 'interface_down_description.j2') }}"
+    rendered_work_notes: "{{ lookup('template', 'interface_down_work_notes.j2') }}"
+
+- name: Create ServiceNow incident for interface down event with log attachment
+  include_role:
+    name: servicenow_itsm
+  vars:
+    itsm_type: incident
+    incident_caller: "{{ interface_down_incident_caller | default(servicenow_default_caller) | default('ansible.automation') }}"
+    incident_short_description: "[INTERFACE DOWN] {{ down_interface }} on {{ inventory_hostname }}"
+    incident_description: "{{ rendered_description }}"
+    incident_work_notes: "{{ rendered_work_notes }}"
+    incident_correlation_id: "interface_down_{{ inventory_hostname }}_{{ down_interface | regex_replace('[^a-zA-Z0-9]', '_') }}"
+    incident_urgency: "{{ interface_down_incident_urgency | default('high') }}"
+    incident_impact: "{{ interface_down_incident_impact | default('medium') }}"
+    incident_assignment_group: "{{ interface_down_assignment_group | default('network.operations') }}"
+    incident_category: network
+    incident_subcategory: connectivity
+    incident_asset_tag: "{{ device_asset_tag | default(omit) }}"
+    # Attach diagnostic logs if available from log collection role
+    incident_attachments: "{{ [{'path': device_log_collection_results.log_file_path, 'name': down_interface + '_diagnostic_logs.txt', 'content_type': 'text/plain'}] if device_log_collection_results.collection_successful else [] }}"
+
+- name: Log interface down incident created with log attachments
+  ansible.builtin.debug:
+    msg: |
+      Interface down incident created for {{ down_interface }} on {{ inventory_hostname }}:
+      - Incident: {{ servicenow_incident_result.number }}
+      - Sys ID: {{ servicenow_incident_result.sys_id }}
+      - Diagnostic logs attached: {{ 'Yes' if device_log_collection_results.collection_successful else 'No' }}
+      - Log file: {{ device_log_collection_results.log_file_path | default('None') }}
+      {% if servicenow_attachment_results is defined and servicenow_attachment_results | length > 0 %}
+      - Attachment results: {{ servicenow_attachment_results | length }} files processed
+      {% endif %}

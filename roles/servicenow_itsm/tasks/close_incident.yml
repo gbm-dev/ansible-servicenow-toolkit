@@ -1,6 +1,12 @@
 ---
 # Purpose: Close resolved ServiceNow incidents when device comes back online
-# Design Pattern: State Management - Close incidents when issue is resolved
+# Design Pattern: State Management - Close incidents when issue is resolved and trusted time source
+
+- name: Ensure localhost facts are available for trusted timestamps
+  setup:
+  delegate_to: localhost
+  delegate_facts: true
+  run_once: true
 
 - name: Check for open incidents for this device
   servicenow.itsm.incident_info:

@@ -18,9 +18,16 @@
       - incident_correlation_id is defined
     fail_msg: "Recommended fields missing: incident_description, incident_correlation_id (needed for duplicate prevention)"
 
-- name: Set incident creation timestamp
+- name: Set incident creation timestamp from trusted localhost
   set_fact:
-    incident_timestamp: "{{ ansible_date_time.epoch }}"
+    incident_timestamp: "{{ hostvars['localhost']['ansible_date_time']['epoch'] }}"
+    ansible_date_time:
+      iso8601: "{{ hostvars['localhost']['ansible_date_time']['iso8601'] }}"
+      epoch: "{{ hostvars['localhost']['ansible_date_time']['epoch'] }}"
+      date: "{{ hostvars['localhost']['ansible_date_time']['date'] }}"
+      time: "{{ hostvars['localhost']['ansible_date_time']['time'] }}"
+  delegate_to: localhost
+  run_once: true
 
 - name: Check for existing incidents to prevent duplicates
   servicenow.itsm.incident_info:
@@ -96,13 +103,13 @@
     sys_id: "{{ existing_incidents.records[0].sys_id }}"
     other:
       work_notes: |
-        Additional occurrence detected: {{ ansible_date_time.iso8601 }}
+        Additional occurrence detected: {{ hostvars['localhost']['ansible_date_time']['iso8601'] }}
         
         {{ incident_work_notes | default('Updated by Ansible automation') }}
         
         Occurrence count: {{ (existing_incidents.records[0].u_occurrence_count | default(1) | int) + 1 }}
       u_occurrence_count: "{{ (existing_incidents.records[0].u_occurrence_count | default(1) | int) + 1 }}"
-      u_last_occurrence: "{{ ansible_date_time.iso8601 }}"
+      u_last_occurrence: "{{ hostvars['localhost']['ansible_date_time']['iso8601'] }}"
   register: snow_incident_updated
   delegate_to: localhost
   retries: "{{ servicenow_api_retry.retries }}"
@@ -116,6 +123,17 @@
       number: "{{ snow_incident_created.record.number if snow_incident_created is defined and snow_incident_created.record is defined else existing_incidents.records[0].number }}"
       sys_id: "{{ snow_incident_created.record.sys_id if snow_incident_created is defined and snow_incident_created.record is defined else existing_incidents.records[0].sys_id }}"
       ci_associated: "{{ ci_info.records | default([]) | length > 0 }}"
+
+# Handle file attachments to the incident
+- name: Process incident attachments
+  include_tasks: attach_files.yml
+  vars:
+    attachment_table_name: incident
+    attachment_record_sys_id: "{{ servicenow_incident_result.sys_id }}"
+  when: 
+    - incident_attachments is defined
+    - incident_attachments | length > 0
+    - servicenow_incident_result.sys_id is defined
 
 - name: Display incident information
   debug:

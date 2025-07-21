@@ -1,0 +1,36 @@
+# ServiceNow ITSM Integration Vault Configuration
+# Copy this file to vault.yml and encrypt with: ansible-vault encrypt group_vars/all/vault.yml
+
+# ServiceNow Instance Configuration
+vault_servicenow_host: "https://your-instance.service-now.com"
+vault_servicenow_username: "your-servicenow-username"  
+vault_servicenow_password: "your-servicenow-password"
+
+# Default ServiceNow Settings
+vault_servicenow_default_caller: "ansible.automation"
+vault_servicenow_default_assignment_group: "network.operations"
+
+# Device Access Credentials (if using vault for network devices)
+# vault_device_username: "your-device-username"
+# vault_device_password: "your-device-password"
+# vault_device_enable_password: "your-enable-password"
+
+# Optional: Email/SMTP Configuration for notifications
+# vault_smtp_server: "smtp.company.com"
+# vault_smtp_username: "notifications@company.com"
+# vault_smtp_password: "smtp-password"
+
+# Optional: External API Keys
+# vault_external_api_key: "your-external-api-key"
+# vault_monitoring_api_token: "your-monitoring-token"
+
+# Example encrypted values (replace with your actual values):
+# vault_servicenow_host: !vault |
+#           $ANSIBLE_VAULT;1.1;AES256
+#           66386439653...
+# vault_servicenow_username: !vault |
+#           $ANSIBLE_VAULT;1.1;AES256  
+#           35663836643...
+# vault_servicenow_password: !vault |
+#           $ANSIBLE_VAULT;1.1;AES256
+#           62313765386...

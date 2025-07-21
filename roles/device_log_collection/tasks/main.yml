@@ -1,0 +1,46 @@
+---
+# Purpose: Collect comprehensive device logs for diagnostic purposes
+# Design Pattern: Single responsibility pattern focused on log collection only
+# Complexity: O(n) where n is the number of log commands executed
+
+- name: Device log collection block
+  block:
+    - name: Set collection timestamp
+      set_fact:
+        log_collection_timestamp: "{{ lookup('pipe', 'date -Iseconds') }}"
+
+    - name: Ensure log collection directory exists
+      ansible.builtin.file:
+        path: "{{ log_collection_storage_path }}/{{ log_collection_device }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: false
+
+    - name: Collect device logs based on context
+      include_tasks: "collect_{{ log_collection_context }}_logs.yml"
+      when: log_collection_context is defined
+
+    - name: Set log collection results
+      set_fact:
+        device_log_collection_results:
+          timestamp: "{{ log_collection_timestamp }}"
+          device: "{{ log_collection_device }}"
+          context: "{{ log_collection_context }}"
+          log_file_path: "{{ log_output_file_path | default('') }}"
+          collection_successful: "{{ device_logs is defined and device_logs.stdout is defined }}"
+
+  rescue:
+    - name: Handle log collection failure
+      set_fact:
+        device_log_collection_results:
+          timestamp: "{{ log_collection_timestamp }}"
+          device: "{{ log_collection_device }}"
+          context: "{{ log_collection_context }}"
+          log_file_path: ""
+          collection_successful: false
+          error_message: "Log collection failed: {{ ansible_failed_result.msg | default('Unknown error') }}"
+
+    - name: Log collection failure message
+      ansible.builtin.debug:
+        msg: "Device log collection failed for {{ log_collection_device }}: {{ device_log_collection_results.error_message }}"

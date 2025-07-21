@@ -137,6 +137,8 @@ Create `roles/your_monitoring_role/tasks/main.yml`:
         incident_category: your_category
         incident_subcategory: your_subcategory
         incident_asset_tag: "{{ device_asset_tag | default(omit) }}"
+        # Optional: Attach diagnostic files to the incident
+        incident_attachments: "{{ diagnostic_files | default([]) }}"
 ```
 
 ### Step 4: Create Jinja2 Templates
@@ -421,6 +423,93 @@ For roles that create change requests or problem records:
     change_description: "{{ rendered_change_description }}"
     # ... other change fields
 ```
+
+### Diagnostic File Collection and Attachment
+
+For roles that collect diagnostic information and attach files to ServiceNow tickets:
+
+```yaml
+- name: Network monitoring with diagnostic logs
+  block:
+    # Perform health check
+    - name: Check network connectivity
+      ansible.builtin.command:
+        cmd: "ping -c 4 {{ target_host }}"
+      register: ping_result
+      
+    # Success path...
+    
+  rescue:
+    # Collect diagnostic information when health check fails
+    - name: Collect diagnostic data
+      block:
+        - name: Get network configuration
+          cisco.ios.ios_command:
+            commands:
+              - "show ip route"
+              - "show ip interface brief"
+              - "show logging | last 50"
+          register: network_diagnostics
+          ignore_errors: true
+
+        - name: Save diagnostic data to file
+          ansible.builtin.copy:
+            content: |
+              Network Diagnostic Report
+              Generated: {{ ansible_date_time.iso8601 }}
+              Device: {{ inventory_hostname }} ({{ ansible_host }})
+              
+              === ROUTING TABLE ===
+              {{ network_diagnostics.stdout[0] if network_diagnostics.stdout is defined else 'Failed to collect routing table' }}
+              
+              === INTERFACE STATUS ===
+              {{ network_diagnostics.stdout[1] if network_diagnostics.stdout is defined else 'Failed to collect interface status' }}
+              
+              === RECENT LOGS ===
+              {{ network_diagnostics.stdout[2] if network_diagnostics.stdout is defined else 'Failed to collect logs' }}
+            dest: "/tmp/{{ inventory_hostname }}_network_diagnostics.txt"
+          delegate_to: localhost
+
+        - name: Set diagnostic files for attachment
+          set_fact:
+            diagnostic_files:
+              - path: "/tmp/{{ inventory_hostname }}_network_diagnostics.txt"
+                name: "{{ inventory_hostname }}_diagnostics.txt"
+                content_type: "text/plain"
+
+    # Create incident with diagnostic attachments
+    - name: Create ServiceNow incident with diagnostics
+      include_role:
+        name: servicenow_itsm
+      vars:
+        itsm_type: incident
+        incident_caller: "network.automation"
+        incident_short_description: "[NETWORK] Connectivity failure on {{ inventory_hostname }}"
+        incident_description: "{{ rendered_description }}"
+        incident_work_notes: "{{ rendered_work_notes }}"
+        incident_correlation_id: "network_failure_{{ inventory_hostname }}"
+        incident_urgency: "high"
+        incident_impact: "medium"
+        incident_category: "network"
+        incident_subcategory: "connectivity"
+        incident_attachments: "{{ diagnostic_files | default([]) }}"
+
+    # Clean up temporary files
+    - name: Remove temporary diagnostic files
+      ansible.builtin.file:
+        path: "/tmp/{{ inventory_hostname }}_network_diagnostics.txt"
+        state: absent
+      delegate_to: localhost
+```
+
+### Best Practices for File Attachments
+
+- **Collect Before ServiceNow Call**: Always collect diagnostic data before creating tickets
+- **Meaningful Filenames**: Use descriptive names that identify device and issue type
+- **File Size Limits**: Keep diagnostic files under 100MB
+- **Cleanup**: Remove temporary files after successful attachment
+- **Error Handling**: Use `ignore_errors: true` for diagnostic collection to ensure incidents are still created
+- **Security**: Don't include sensitive credentials or secrets in diagnostic files
 
 ## Best Practices
 

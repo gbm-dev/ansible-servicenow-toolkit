@@ -1,0 +1,23 @@
+Interface Recovery Detected
+
+AUTOMATED RESOLUTION:
+Interface {{ up_interface }} on {{ inventory_hostname }} has been restored to operational status.
+
+RECOVERY DETAILS:
+- Interface: {{ up_interface }}
+- Previous State: {{ previous_interfaces[up_interface].status | default('down') }}
+- Current State: {{ monitored_interfaces[up_interface].status }}
+- Recovery Time: {{ current_timestamp }}
+
+CURRENT INTERFACE STATUS:
+- VLAN: {{ monitored_interfaces[up_interface].vlan | default('unassigned') }}
+- Speed: {{ monitored_interfaces[up_interface].speed | default('auto') }}
+- Duplex: {{ monitored_interfaces[up_interface].duplex | default('auto') }}
+- Type: {{ monitored_interfaces[up_interface].type | default('unknown') }}
+
+MONITORING METADATA:
+- Device IP: {{ ansible_host }}
+- Recovery Detection: {{ current_timestamp }}
+- Resolution Method: Automated interface status monitoring
+
+Interface has been confirmed operational. Incident closed automatically.

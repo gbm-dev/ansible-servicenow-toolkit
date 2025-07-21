@@ -4,3 +4,20 @@ all:
     localhost:
       ansible_connection: local
       ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    
+    # Cisco DevNet Sandbox - Cat9000 Always-On
+    devnet-cat9k-01:
+      ansible_host: devnetsandboxiosxec9k.cisco.com
+      ansible_connection: network_cli
+      ansible_network_os: ios
+      ansible_user: gabe
+      ansible_password: VChj45TfH4kb-_b_
+      ansible_port: 22
+      device_type: cisco_ios
+      device_location: "DevNet Sandbox"
+      device_asset_tag: "DEVNET-CAT9K-01"
+
+  children:
+    network_devices:
+      hosts:
+        devnet-cat9k-01:

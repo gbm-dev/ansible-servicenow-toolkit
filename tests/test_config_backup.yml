@@ -1,0 +1,280 @@
+---
+# Comprehensive test playbook for configuration backup role
+# Tests: successful backup, hash same, hash different, backup failure, and incident resolution
+
+- name: Test Configuration Backup Role - All Scenarios
+  hosts: devnet-cat9k-01
+  gather_facts: yes
+  
+  vars_files:
+    - ../group_vars/all/vault.yml
+    
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+    # Test configuration storage
+    config_backup_storage_path: "/tmp/test-config-backups"
+    
+  tasks:
+    - name: Clean up test environment
+      ansible.builtin.file:
+        path: "{{ config_backup_storage_path }}"
+        state: absent
+        
+    - name: Create test backup directory
+      ansible.builtin.file:
+        path: "{{ config_backup_storage_path }}"
+        state: directory
+        mode: '0755'
+
+    # TEST CASE 1: First backup (no existing backup) - Should succeed and create backup
+    - name: "TEST 1: First successful backup (no existing backup)"
+      block:
+        - name: Display test case
+          debug:
+            msg: "TEST 1: Testing first backup with real device - should succeed and save config"
+        
+        - name: Include config backup role
+          include_role:
+            name: config_backup
+            
+        - name: Verify first backup was created
+          ansible.builtin.stat:
+            path: "{{ config_backup_storage_path }}/{{ inventory_hostname }}/running-config.txt"
+          register: first_backup_check
+          
+        - name: Assert first backup exists
+          assert:
+            that: first_backup_check.stat.exists
+            fail_msg: "First backup should have been created"
+            success_msg: "✅ First backup created successfully"
+
+    # TEST CASE 2: Same hash (no changes) - Should not save new backup
+    - name: "TEST 2: Same configuration (hash unchanged)"
+      block:
+        - name: Display test case
+          debug:
+            msg: "TEST 2: Testing same config hash with real device - should not save duplicate"
+            
+        - name: Include config backup role again (should detect same config)
+          include_role:
+            name: config_backup
+            
+        - name: Check backup directory for duplicate files
+          find:
+            paths: "{{ config_backup_storage_path }}/{{ inventory_hostname }}/"
+            patterns: "running-config.txt*"
+          register: backup_files
+          
+        - name: Assert only one backup file exists
+          assert:
+            that: backup_files.files | length == 1
+            fail_msg: "Should not create duplicate backup for same hash"
+            success_msg: "✅ No duplicate backup created for unchanged config"
+
+    # TEST CASE 3: Different hash (config changed) - Should save new backup
+    - name: "TEST 3: Configuration changed (hash different)"
+      block:
+        - name: Display test case
+          debug:
+            msg: "TEST 3: Testing changed config with real device - making actual config change"
+            
+        - name: Add test loopback interface to change config
+          cisco.ios.ios_config:
+            lines:
+              - "description TEST-CONFIG-BACKUP-{{ ansible_date_time.date | default('test') }}"
+              - "ip address 172.16.200.1 255.255.255.255"
+            parents: "interface Loopback200"
+        
+        - name: Include config backup role with changed config  
+          include_role:
+            name: config_backup
+            
+        - name: Remove test loopback interface to clean up
+          cisco.ios.ios_config:
+            lines:
+              - "no interface Loopback200"
+            
+        - name: Check for backup with timestamp (indicates new backup)
+          find:
+            paths: "{{ config_backup_storage_path }}/{{ inventory_hostname }}/"
+            patterns: "running-config.txt.*"
+          register: timestamped_backups
+          
+        - name: Assert timestamped backup was created
+          assert:
+            that: timestamped_backups.files | length >= 1
+            fail_msg: "Should create timestamped backup for changed config"
+            success_msg: "✅ New backup created for changed configuration"
+
+    # TEST CASE 4: Backup failure - Should create ServiceNow incident  
+    - name: "TEST 4: Backup failure (should create incident)"
+      block:
+        - name: Display test case
+          debug:
+            msg: "TEST 4: Testing backup failure with invalid credentials - should create ServiceNow incident"
+            
+        - name: Force backup failure by using invalid credentials
+          set_fact:
+            original_user: "{{ ansible_user }}"
+            original_password: "{{ ansible_password }}"
+            ansible_user: "invalid_user"
+            ansible_password: "invalid_password"
+            
+        - name: Attempt backup with invalid credentials (should fail)
+          include_role:
+            name: config_backup
+          ignore_errors: true
+          
+        - name: Restore original credentials for remaining tests
+          set_fact:
+            ansible_user: "{{ original_user }}"
+            ansible_password: "{{ original_password }}"
+          
+        - name: Wait for incident processing
+          pause:
+            seconds: 3
+            
+        - name: Check for created incident in ServiceNow
+          servicenow.itsm.incident_info:
+            instance:
+              host: "{{ servicenow_host }}"
+              username: "{{ servicenow_username }}"
+              password: "{{ servicenow_password }}"
+            sysparm_query: "correlation_id=config_backup_{{ inventory_hostname }}^state!=6^state!=7"
+          register: backup_failure_incident
+          
+        - name: Debug backup failure incident result
+          debug:
+            var: backup_failure_incident
+            
+        - name: Assert backup failure incident was created
+          assert:
+            that: backup_failure_incident.record is defined and backup_failure_incident.record | length > 0
+            fail_msg: "Backup failure incident should have been created"
+            success_msg: "✅ Backup failure incident created"
+
+    # TEST CASE 5: Backup recovery - Should close incident
+    - name: "TEST 5: Backup recovery (should close incident)"
+      block:
+        - name: Display test case
+          debug:
+            msg: "TEST 5: Testing backup recovery with real device - should close existing incident"
+        
+        - name: Recover backup with valid credentials (should close incident)
+          include_role:
+            name: config_backup
+            
+        - name: Wait for incident closure processing
+          pause:
+            seconds: 3
+            
+        - name: Check that incident was closed
+          servicenow.itsm.incident_info:
+            instance:
+              host: "{{ servicenow_host }}"
+              username: "{{ servicenow_username }}"
+              password: "{{ servicenow_password }}"
+            sysparm_query: "correlation_id=config_backup_{{ inventory_hostname }}"
+          register: closed_incident
+          
+        - name: Assert incident was closed
+          assert:
+            that: 
+              - closed_incident.record is defined
+              - closed_incident.record | length > 0
+              - closed_incident.record[0].state in ["6", "7"]  # Resolved or Closed
+            fail_msg: "Backup failure incident should have been closed"
+            success_msg: "✅ Backup failure incident closed"
+
+    # TEST CASE 6: Skip incident when device unreachable ticket exists
+    - name: "TEST 6: Skip backup incident when device unreachable exists"
+      block:
+        - name: Display test case
+          debug:
+            msg: "TEST 6: Testing incident skip when device unreachable ticket exists for real device"
+            
+        - name: Create device unreachable incident first
+          include_role:
+            name: servicenow_itsm
+          vars:
+            itsm_type: incident
+            incident_caller: "{{ servicenow_default_caller }}"
+            incident_short_description: "[NETWORK] Device {{ inventory_hostname }} unreachable"
+            incident_description: "Test device unreachable incident for backup skip test on real device"
+            incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
+            incident_urgency: medium
+            incident_impact: medium
+            incident_category: network
+            incident_subcategory: connectivity
+            
+        - name: Wait for incident creation
+          pause:
+            seconds: 2
+            
+        - name: Force backup failure with invalid credentials (should skip incident creation)
+          block:
+            - name: Use invalid credentials
+              set_fact:
+                ansible_user: "invalid_user"
+                ansible_password: "invalid_password"
+                
+            - name: Attempt backup with invalid credentials (should skip incident creation)
+              include_role:
+                name: config_backup
+              ignore_errors: true
+              
+            - name: Restore valid credentials
+              set_fact:
+                ansible_user: "{{ original_user }}"
+                ansible_password: "{{ original_password }}"
+          
+        - name: Check for backup incident (should not exist)
+          servicenow.itsm.incident_info:
+            instance:
+              host: "{{ servicenow_host }}"
+              username: "{{ servicenow_username }}"
+              password: "{{ servicenow_password }}"
+            sysparm_query: "correlation_id=config_backup_{{ inventory_hostname }}^state!=6^state!=7"
+          register: skipped_incident
+          
+        - name: Assert backup incident was skipped
+          assert:
+            that: skipped_incident.record is not defined or skipped_incident.record | length == 0
+            fail_msg: "Backup incident should have been skipped due to existing connectivity incident"
+            success_msg: "✅ Backup incident correctly skipped - device unreachable incident exists"
+            
+        # Clean up the connectivity incident
+        - name: Close test connectivity incident
+          include_role:
+            name: servicenow_itsm
+            tasks_from: close_incident
+          vars:
+            incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
+            incident_close_code: "Resolved by caller"
+            incident_close_notes: "Test cleanup - closing connectivity incident"
+            incident_close_work_notes: "Test completed"
+
+    # Summary
+    - name: Test Summary
+      debug:
+        msg: |
+          Configuration Backup Role - All Test Cases Complete!
+          
+          ✅ Test Results:
+          1. First backup (no existing) - Created backup successfully
+          2. Same hash (no changes) - No duplicate backup created
+          3. Different hash (changed) - New backup with timestamp created
+          4. Backup failure - ServiceNow incident created
+          5. Backup recovery - ServiceNow incident closed
+          6. Skip incident - Backup incident skipped when device unreachable exists
+          
+          Check ServiceNow for created/closed incidents
+          Check {{ config_backup_storage_path }}/ for backup files

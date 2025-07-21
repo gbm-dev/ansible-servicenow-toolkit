@@ -1,0 +1,48 @@
+---
+- name: Debug Log Collection Commands
+  hosts: devnet-cat9k-01
+  gather_facts: no
+  
+  tasks:
+    - name: Test comprehensive device log commands
+      cisco.ios.ios_command:
+        commands:
+          # Interface status and configuration  
+          - "show interface Vlan999"
+          - "show interface Vlan999 status"
+          - "show interface Vlan999 switchport"
+          # Recent system logs - get last 100 entries to capture recent events
+          - "show logging last 100"
+          # Interface-specific log entries (line protocol, admin changes)
+          - "show logging | grep -i Vlan999"
+          # Configuration change logs (who changed what)
+          - "show logging | grep -i 'configured'"
+          - "show logging | grep -i 'config'"
+          # Authentication and user session logs
+          - "show logging | grep -i 'login\\|logout\\|user\\|authentication'"
+          # Line protocol and interface state change logs
+          - "show logging | grep -i 'line protocol\\|changed state'"
+          # Hardware and error logs
+          - "show logging | grep -i 'error\\|failed\\|down\\|up'"
+          # Recent archive/configuration history if available
+          - "show archive config differences"
+      register: debug_logs
+      timeout: 60
+      ignore_errors: true
+      
+    - name: Display command results  
+      debug:
+        msg: |
+          Command {{ item.0 }}: {{ item.1.command if item.1.command is defined else 'No command' }}
+          Return Code: {{ item.1.return_code if item.1.return_code is defined else 'N/A' }}
+          Output Length: {{ item.1.stdout | length if item.1.stdout is defined else 'N/A' }}
+          Output: {{ item.1.stdout[:200] if item.1.stdout is defined and item.1.stdout else 'Empty or None' }}...
+          {% if item.1.stderr is defined and item.1.stderr %}
+          Error: {{ item.1.stderr }}
+          {% endif %}
+      loop: "{{ range(debug_logs.stdout | length) | zip(debug_logs.results | default([])) | list }}"
+      when: debug_logs is defined
+      
+    - name: Show raw debug_logs structure
+      debug:
+        var: debug_logs

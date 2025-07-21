@@ -18,9 +18,16 @@
     fail_msg: "assignment_group is required when state is not 'new'"
   when: change_state is defined and change_state not in ['new']
 
-- name: Set change creation timestamp
+- name: Set change creation timestamp from trusted localhost
   set_fact:
-    change_timestamp: "{{ ansible_date_time.epoch }}"
+    change_timestamp: "{{ hostvars['localhost']['ansible_date_time']['epoch'] }}"
+    ansible_date_time:
+      iso8601: "{{ hostvars['localhost']['ansible_date_time']['iso8601'] }}"
+      epoch: "{{ hostvars['localhost']['ansible_date_time']['epoch'] }}"
+      date: "{{ hostvars['localhost']['ansible_date_time']['date'] }}"
+      time: "{{ hostvars['localhost']['ansible_date_time']['time'] }}"
+  delegate_to: localhost
+  run_once: true
 
 - name: Check for existing change requests to prevent duplicates
   servicenow.itsm.change_request_info:

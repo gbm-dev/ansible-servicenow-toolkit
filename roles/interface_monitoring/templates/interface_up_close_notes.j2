@@ -1,0 +1,11 @@
+Interface {{ up_interface }} on {{ inventory_hostname }} has been restored to operational status.
+
+RESOLUTION SUMMARY:
+The interface that was previously down has returned to connected/up state through automated monitoring detection.
+
+FINAL STATUS:
+- Interface: {{ up_interface }}
+- Current Status: {{ monitored_interfaces[up_interface].status }}
+- Restored at: {{ current_timestamp }}
+
+This incident has been automatically resolved by the interface monitoring system.

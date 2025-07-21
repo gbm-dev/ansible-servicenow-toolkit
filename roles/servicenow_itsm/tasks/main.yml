@@ -1,6 +1,12 @@
 ---
 # Purpose: ServiceNow ITSM automation wrapper for incidents, changes, and problems
-# Design Pattern: Multi-object ITSM handler with type-based routing
+# Design Pattern: Multi-object ITSM handler with type-based routing and trusted time source
+
+- name: Ensure localhost facts are available for trusted timestamps
+  setup:
+  delegate_to: localhost
+  delegate_facts: true
+  run_once: true
 
 - name: Validate required ITSM type
   assert:

@@ -1,0 +1,21 @@
+Interface Down Event Detected
+
+AUTOMATED MONITORING ALERT:
+Interface {{ down_interface }} on {{ inventory_hostname }} has changed status from {{ previous_interfaces[down_interface].status | default('connected') }} to {{ monitored_interfaces[down_interface].status }}.
+
+INTERFACE TECHNICAL DETAILS:
+- Interface: {{ down_interface }}
+- Previous State: {{ previous_interfaces[down_interface].status | default('connected') }} 
+- Current State: {{ monitored_interfaces[down_interface].status }}
+- VLAN Assignment: {{ monitored_interfaces[down_interface].vlan | default('unassigned') }}
+- Port Speed: {{ monitored_interfaces[down_interface].speed | default('auto') }}
+- Duplex Mode: {{ monitored_interfaces[down_interface].duplex | default('auto') }}
+- Port Type: {{ monitored_interfaces[down_interface].type | default('unknown') }}
+
+MONITORING METADATA:
+- Device IP: {{ ansible_host }}
+- Monitoring Run: {{ current_timestamp }}
+- Detection Method: Automated interface status comparison
+- Correlation ID: interface_down_{{ inventory_hostname }}_{{ down_interface | regex_replace('[^a-zA-Z0-9]', '_') }}
+
+This incident will be automatically closed when the interface returns to operational status.

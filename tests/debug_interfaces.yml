@@ -1,0 +1,25 @@
+---
+- name: Debug Interface Commands
+  hosts: devnet-cat9k-01
+  gather_facts: no
+  
+  tasks:
+    - name: Show IP interface brief
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: ip_brief_result
+      
+    - name: Display IP interface brief output
+      debug:
+        msg: "{{ ip_brief_result.stdout[0] }}"
+        
+    - name: Show interfaces status
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces status
+      register: int_status_result
+      
+    - name: Display interfaces status output
+      debug:
+        msg: "{{ int_status_result.stdout[0] }}"
