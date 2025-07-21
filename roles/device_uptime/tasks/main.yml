@@ -1,0 +1,73 @@
+---
+# Purpose: Check device connectivity, create incidents for failures, and close them when resolved
+# Design Pattern: Health check with state management for incident lifecycle
+
+- name: Device connectivity check with incident lifecycle management
+  block:
+    - name: Test device connectivity
+      ansible.builtin.ping:
+        data: uptime_check
+      register: ping_result
+      timeout: "{{ uptime_check_timeout | default(10) }}"
+
+    - name: Gather device facts if reachable
+      ansible.builtin.setup:
+        filter: 
+          - ansible_uptime_seconds
+          - ansible_net_model
+          - ansible_net_version
+      when: ping_result is succeeded
+
+    - name: Log successful connectivity
+      ansible.builtin.debug:
+        msg: "Device {{ inventory_hostname }} is UP ({{ ansible_uptime_seconds | default('unknown') }}s uptime)"
+      when: ping_result is succeeded
+
+    - name: Close any open incidents for this device
+      include_role:
+        name: servicenow_incident_creator
+        tasks_from: close_incident
+      vars:
+        incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
+      when: ping_result is succeeded
+
+  rescue:
+    - name: Create ServiceNow incident for connectivity failure
+      include_role:
+        name: servicenow_incident_creator
+      vars:
+        incident_short_description: "[NETWORK] Device {{ inventory_hostname }} unreachable"
+        incident_description: |
+          Network Device Connectivity Failure
+          
+          Device Details:
+          - Hostname: {{ inventory_hostname }}
+          - IP Address: {{ ansible_host | default('Not configured') }}
+          - Device Type: {{ device_type | default('network_device') }}
+          - Location: {{ device_location | default('Unknown') }}
+          
+          Failure Information:
+          - Check Type: ICMP Ping Test
+          - Timeout: {{ uptime_check_timeout | default(10) }}s
+          - Failed Task: {{ ansible_failed_task.name }}
+          - Error Message: {{ ansible_failed_result.msg | default('Connection timeout') }}
+          
+          Impact:
+          This device is not responding to network connectivity tests and may be offline,
+          affecting network services and connected systems.
+          
+          Recommended Actions:
+          1. Verify physical connectivity and power status
+          2. Check upstream network devices
+          3. Review recent configuration changes
+          4. Check device logs if accessible via console
+        incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
+        incident_urgency: "{{ uptime_incident_urgency | default('medium') }}"
+        incident_impact: "{{ uptime_incident_impact | default('medium') }}"
+        incident_assignment_group: "{{ uptime_assignment_group | default('network.operations') }}"
+        incident_category: network
+        incident_subcategory: connectivity
+        incident_work_notes: |
+          Automated detection by Ansible health check
+          Previous check status: {{ last_check_status | default('Unknown') }}
+        incident_asset_tag: "{{ device_asset_tag | default(omit) }}"

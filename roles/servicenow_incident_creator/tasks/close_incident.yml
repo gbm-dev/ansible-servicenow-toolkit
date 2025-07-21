@@ -1,0 +1,52 @@
+---
+# Purpose: Close resolved ServiceNow incidents when device comes back online
+# Design Pattern: State Management - Close incidents when issue is resolved
+
+- name: Check for open incidents for this device
+  servicenow.itsm.incident_info:
+    instance: "{{ servicenow_instance }}"
+    sysparm_query: "correlation_id={{ incident_correlation_id }}^state!=6^state!=7"  # Not resolved or closed
+  register: open_incidents
+  delegate_to: localhost
+
+- name: Close incident when device is back online
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_instance }}"
+    sys_id: "{{ item.sys_id }}"
+    state: resolved
+    close_code: "Resolved by caller"
+    close_notes: |
+      Device connectivity restored
+      
+      Resolution Details:
+      - Device: {{ inventory_hostname }} ({{ ansible_host | default('N/A') }})
+      - Resolved Time: {{ ansible_date_time.iso8601 }}
+      - Resolution: Device is now responding to health checks
+      - Downtime Duration: Calculated from {{ item.opened_at }}
+      
+      Automated closure by Ansible health check monitoring
+    other:
+      work_notes: |
+        Device back online - automatically closing incident
+        Last successful check: {{ ansible_date_time.iso8601 }}
+  loop: "{{ open_incidents.records }}"
+  when: open_incidents.records | length > 0
+  delegate_to: localhost
+  register: closed_incidents
+
+- name: Set closure result facts
+  set_fact:
+    servicenow_closure_result:
+      incidents_closed: "{{ closed_incidents.results | default([]) | length }}"
+      closed_numbers: "{{ closed_incidents.results | default([]) | map(attribute='record.number') | list }}"
+  when: open_incidents.records | length > 0
+
+- name: Display closure information
+  debug:
+    msg: |
+      ServiceNow Incident(s) CLOSED
+      - Count: {{ servicenow_closure_result.incidents_closed }}
+      - Numbers: {{ servicenow_closure_result.closed_numbers | join(', ') }}
+  when: 
+    - servicenow_closure_result is defined
+    - servicenow_closure_result.incidents_closed | int > 0

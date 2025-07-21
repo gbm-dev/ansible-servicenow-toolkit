@@ -1,0 +1,23 @@
+---
+# Example playbook demonstrating ServiceNow incident creation for network monitoring
+
+- name: Network Device Health Monitoring with ServiceNow Integration
+  hosts: network_devices
+  gather_facts: no
+  vars:
+    # ServiceNow connection details from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+  tasks:
+    - name: Run device uptime check
+      include_role:
+        name: device_uptime
+      vars:
+        uptime_incident_urgency: "{{ 2 if 'core' in group_names else 3 }}"
+        uptime_incident_impact: "{{ 1 if 'core' in group_names else 2 }}"

@@ -1,0 +1,61 @@
+---
+# Test playbook to create incident with asset tag association
+
+- name: Test ServiceNow Incident with Asset Tag P1000002
+  hosts: localhost
+  gather_facts: yes
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+  tasks:
+    - name: Create incident associated with asset tag P1000002
+      include_role:
+        name: servicenow_incident_creator
+      vars:
+        incident_short_description: "[NETWORK] Device core-sw-03 unreachable"
+        incident_description: |
+          Network Device Connectivity Failure
+          
+          Device Details:
+          - Hostname: core-sw-03
+          - IP Address: 10.1.1.3
+          - Device Type: cisco_ios
+          - Location: Datacenter A
+          - Asset Tag: P1000002
+          
+          Failure Information:
+          - Check Type: ICMP Ping Test
+          - Timeout: 10s
+          - Failed Task: Device connectivity check
+          - Error Message: No response from device - connection timeout
+          
+          Impact:
+          Core switch is not responding to network connectivity tests. This is a critical
+          infrastructure component affecting multiple downstream services.
+          
+          Recommended Actions:
+          1. Check power and physical connections immediately
+          2. Verify upstream connectivity from distribution switches
+          3. Check for any recent changes or maintenance activities
+          4. Access device via console if network access unavailable
+          5. Engage vendor support if hardware failure suspected
+        incident_correlation_id: "device_connectivity_core-sw-03"
+        incident_urgency: high
+        incident_impact: high
+        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_category: network
+        incident_subcategory: connectivity
+        incident_work_notes: "Critical core switch failure - immediate attention required"
+        incident_asset_tag: "P1000002"
+        inventory_hostname: core-sw-03
+        ansible_host: 10.1.1.3
+        device_type: cisco_ios
+        device_location: "Datacenter A"

@@ -1,0 +1,26 @@
+---
+# Simple connectivity test without ServiceNow
+
+- name: Test Device Connectivity
+  hosts: external-rtr-01
+  gather_facts: no
+  
+  tasks:
+    - name: Test basic ping
+      ansible.builtin.ping:
+      register: ping_result
+      ignore_errors: yes
+
+    - name: Show ping result
+      debug:
+        var: ping_result
+
+    - name: Test with SSH connection
+      ansible.builtin.wait_for_connection:
+        timeout: 10
+      register: ssh_result
+      ignore_errors: yes
+      
+    - name: Show SSH result
+      debug:
+        var: ssh_result

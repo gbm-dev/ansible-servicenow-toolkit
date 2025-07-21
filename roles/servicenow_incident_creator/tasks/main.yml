@@ -1,0 +1,126 @@
+---
+# Purpose: Create ServiceNow incidents with duplicate prevention and CI association
+# Design Pattern: Error Handling with Rescue Blocks and Conditional Creation
+
+- name: Validate required variables
+  assert:
+    that:
+      - incident_short_description is defined
+      - incident_description is defined
+      - incident_correlation_id is defined
+    fail_msg: "Required variables missing: incident_short_description, incident_description, incident_correlation_id"
+
+- name: Set incident creation timestamp
+  set_fact:
+    incident_timestamp: "{{ ansible_date_time.epoch }}"
+
+- name: Check for existing incidents to prevent duplicates
+  servicenow.itsm.incident_info:
+    instance: "{{ servicenow_instance }}"
+    sysparm_query: "correlation_id={{ incident_correlation_id }}^state!=6"
+  register: existing_incidents
+  delegate_to: localhost
+  when: servicenow_duplicate_check.enabled | bool
+
+- name: Lookup Configuration Item (CI) for network device
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ servicenow_instance }}"
+    query:
+      - asset_tag: "= {{ incident_asset_tag | default('') }}"
+  register: ci_info_by_asset
+  delegate_to: localhost
+  when: 
+    - servicenow_ci_lookup.enabled | bool
+    - existing_incidents.records | default([]) | length == 0
+    - incident_asset_tag is defined
+
+- name: Lookup Configuration Item (CI) by name if no asset tag
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ servicenow_instance }}"
+    name: "{{ incident_ci_name | default(inventory_hostname) }}"
+  register: ci_info_by_name
+  delegate_to: localhost
+  when: 
+    - servicenow_ci_lookup.enabled | bool
+    - existing_incidents.records | default([]) | length == 0
+    - incident_asset_tag is not defined
+
+- name: Set CI info from lookup results
+  set_fact:
+    ci_info: "{{ ci_info_by_asset if incident_asset_tag is defined else ci_info_by_name }}"
+  when:
+    - servicenow_ci_lookup.enabled | bool
+    - existing_incidents.records | default([]) | length == 0
+
+- name: Create new ServiceNow incident
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_instance }}"
+    state: new
+    caller: "{{ incident_caller | default(servicenow_incident_defaults.caller) }}"
+    short_description: "{{ incident_short_description }}"
+    description: |
+      {{ incident_description }}
+      
+      Device Information:
+      - Hostname: {{ inventory_hostname }}
+      - IP Address: {{ ansible_host | default('Not specified') }}
+      - Device Type: {{ device_type | default('network_device') }}
+      
+      Automation Details:
+      - Playbook: {{ playbook_name | default(ansible_play_name) | default('Unknown') }}
+      - Task: {{ ansible_failed_task.name | default('Health Check') }}
+      - Timestamp: {{ ansible_date_time.iso8601 }}
+    urgency: "{{ incident_urgency | default('medium') }}"
+    impact: "{{ incident_impact | default('medium') }}"
+    other:
+      assignment_group: "{{ incident_assignment_group | default(servicenow_incident_defaults.assignment_group) }}"
+      category: "{{ incident_category | default(servicenow_incident_defaults.category) }}"
+      subcategory: "{{ incident_subcategory | default(servicenow_incident_defaults.subcategory) }}"
+      cmdb_ci: "{{ ci_info.records[0].sys_id | default('') }}"
+      correlation_id: "{{ incident_correlation_id }}"
+      work_notes: "{{ incident_work_notes | default('Created by Ansible automation') }}"
+      u_automation_source: ansible
+      u_device_hostname: "{{ inventory_hostname }}"
+  register: snow_incident_created
+  delegate_to: localhost
+  retries: "{{ servicenow_api_retry.retries }}"
+  delay: "{{ servicenow_api_retry.delay }}"
+  when: existing_incidents.records | default([]) | length == 0
+
+- name: Update existing incident with new occurrence
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_instance }}"
+    sys_id: "{{ existing_incidents.records[0].sys_id }}"
+    other:
+      work_notes: |
+        Additional occurrence detected: {{ ansible_date_time.iso8601 }}
+        
+        {{ incident_work_notes | default('Updated by Ansible automation') }}
+        
+        Occurrence count: {{ (existing_incidents.records[0].u_occurrence_count | default(1) | int) + 1 }}
+      u_occurrence_count: "{{ (existing_incidents.records[0].u_occurrence_count | default(1) | int) + 1 }}"
+      u_last_occurrence: "{{ ansible_date_time.iso8601 }}"
+  register: snow_incident_updated
+  delegate_to: localhost
+  retries: "{{ servicenow_api_retry.retries }}"
+  delay: "{{ servicenow_api_retry.delay }}"
+  when: existing_incidents.records | default([]) | length > 0
+
+- name: Set incident result facts
+  set_fact:
+    servicenow_incident_result:
+      action: "{{ 'created' if existing_incidents.records | default([]) | length == 0 else 'updated' }}"
+      number: "{{ snow_incident_created.record.number if snow_incident_created is defined else existing_incidents.records[0].number }}"
+      sys_id: "{{ snow_incident_created.record.sys_id if snow_incident_created is defined else existing_incidents.records[0].sys_id }}"
+      ci_associated: "{{ ci_info.records | default([]) | length > 0 }}"
+
+- name: Display incident information
+  debug:
+    msg: |
+      ServiceNow Incident {{ servicenow_incident_result.action | upper }}
+      - Number: {{ servicenow_incident_result.number }}
+      - Sys ID: {{ servicenow_incident_result.sys_id }}
+      - CI Associated: {{ 'Yes' if servicenow_incident_result.ci_associated else 'No' }}
+      {% if servicenow_incident_result.action == 'updated' %}
+      - Occurrence Count: {{ (existing_incidents.records[0].u_occurrence_count | default(1) | int) + 1 }}
+      {% endif %}

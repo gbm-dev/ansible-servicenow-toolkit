@@ -1,0 +1,9 @@
+---
+# Device uptime check configuration
+uptime_check_timeout: 10
+uptime_check_retries: 2
+
+# ServiceNow incident parameters for uptime failures
+uptime_incident_urgency: medium
+uptime_incident_impact: medium
+uptime_assignment_group: Network

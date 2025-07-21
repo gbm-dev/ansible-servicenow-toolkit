@@ -1,0 +1,47 @@
+---
+# Production-ready monitoring playbook with ServiceNow integration
+
+- name: Network Device Monitoring with ServiceNow Incident Creation
+  hosts: network_devices
+  gather_facts: no
+  serial: "{{ monitoring_batch_size | default(10) }}"
+  strategy: free
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+  pre_tasks:
+    - name: Verify ServiceNow credentials are loaded
+      assert:
+        that:
+          - vault_servicenow_host is defined
+          - vault_servicenow_username is defined
+          - vault_servicenow_password is defined
+        fail_msg: "ServiceNow vault credentials not loaded. Run with --ask-vault-pass"
+      run_once: true
+      delegate_to: localhost
+
+  roles:
+    - role: device_uptime
+      tags: [uptime, critical]
+      vars:
+        # Adjust urgency/impact based on device criticality
+        uptime_incident_urgency: "{{ 1 if 'core' in group_names else 2 }}"
+        uptime_incident_impact: "{{ 1 if 'core' in group_names else 3 }}"
+        uptime_assignment_group: >-
+          {{ 'network.core' if 'core' in group_names else 'network.operations' }}
+
+  post_tasks:
+    - name: Summary of monitoring run
+      debug:
+        msg: |
+          Monitoring completed for {{ inventory_hostname }}
+          ServiceNow Instance: {{ vault_servicenow_instance_name }}
+      tags: [always]

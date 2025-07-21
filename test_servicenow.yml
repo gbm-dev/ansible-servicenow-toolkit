@@ -1,0 +1,37 @@
+---
+# Test playbook to verify ServiceNow connection and incident creation
+
+- name: Test ServiceNow Integration
+  hosts: external-rtr-01
+  gather_facts: no
+  
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    
+  tasks:
+    - name: Display configuration
+      debug:
+        msg: |
+          ServiceNow Configuration:
+          - Instance: {{ vault_servicenow_instance_name }}
+          - URL: {{ servicenow_host }}
+          - Default Caller: {{ servicenow_default_caller }}
+          - Default Assignment Group: {{ servicenow_default_assignment_group }}
+          - Target Device: {{ inventory_hostname }} ({{ ansible_host }})
+      run_once: true
+      delegate_to: localhost
+
+    - name: Test device uptime check
+      include_role:
+        name: device_uptime
+      vars:
+        uptime_incident_urgency: 3
+        uptime_incident_impact: 3
+        uptime_assignment_group: "{{ servicenow_default_assignment_group }}"
