@@ -6,23 +6,27 @@ This directory contains comprehensive tests for the Ansible ServiceNow monitorin
 
 ## Test Categories
 
-### Basic Connectivity Tests
-- `test_connectivity.yml` - Basic device connectivity without ServiceNow integration
-- `test_servicenow.yml` - ServiceNow connection and device_uptime role execution
+### Role Testing
+- `test_device_uptime_role.yml` - Tests device uptime monitoring role
+- `test_config_backup_role.yml` - Tests configuration backup role functionality
+- `test_config_backup_real_device.yml` - Tests config backup role with real device
+- `test_interface_monitoring_role.yml` - Tests interface monitoring role
 
-### Incident Management Tests
-- `test_failed_device.yml` - Simulates device failure and creates incidents using templates
-- `test_incident_creation.yml` - Standalone incident creation test
-- `test_incident_closure.yml` - Tests incident closure with templates
-- `test_incident_lifecycle.yml` - Complete incident lifecycle (create → close)
+### ServiceNow ITSM Feature Testing
+- `test_itsm_incidents.yml` - Tests incident creation and management
+- `test_itsm_changes.yml` - Tests change request creation and management  
+- `test_itsm_problems.yml` - Tests problem record creation and management
+- `test_itsm_lifecycle.yml` - Tests complete incident lifecycle (create → close)
+- `test_itsm_incident_closure.yml` - Tests incident closure with templates
+- `test_itsm_attachments.yml` - Tests file attachment functionality
+- `test_itsm_validation.yml` - Tests required field validation
 
-### ITSM Object Tests
-- `test_change_request.yml` - Change request creation and management
-- `test_problem_record.yml` - Problem record creation and management
-
-### Integration Tests  
-- `test_asset_tag.yml` - Incident creation with Configuration Item association
-- `test_validation_error.yml` - Required field validation testing
+### Integration & Feature Testing
+- `test_basic_connectivity.yml` - Basic device connectivity and ticket creation
+- `test_template_rendering.yml` - Tests Jinja2 template rendering for incidents
+- `test_cmdb_integration.yml` - Tests Configuration Item (CI) association
+- `test_basic_logs.yml` - Tests device log collection functionality
+- `test_inventory.yml` - Tests inventory structure and variables
 
 ## Running Tests
 
@@ -32,14 +36,10 @@ This directory contains comprehensive tests for the Ansible ServiceNow monitorin
 # Navigate to tests directory
 cd tests/
 
-# Run a specific test
-./run_tests.sh connectivity
-
-# Run with verbose output
-./run_tests.sh -v incident-lifecycle
-
-# Run all tests
-./run_tests.sh all
+# Run specific tests
+ansible-playbook test_basic_connectivity.yml
+ansible-playbook test_device_uptime_role.yml
+ansible-playbook test_itsm_incidents.yml
 ```
 
 ### Manual Test Execution
@@ -47,39 +47,33 @@ cd tests/
 You can also run tests manually with ansible-playbook:
 
 ```bash
-# Basic test
-ansible-playbook -i ../inventory/production.yml test_connectivity.yml
+# Basic connectivity test
+ansible-playbook -i ../inventory/production.yml test_basic_connectivity.yml
 
-# With vault password file
-ansible-playbook -i ../inventory/production.yml --vault-password-file ../.vault_pass test_failed_device.yml
+# Template rendering test with vault
+ansible-playbook -i ../inventory/production.yml --vault-password-file ../.vault_pass test_template_rendering.yml
 
-# With verbose output
-ansible-playbook -vvv -i ../inventory/production.yml test_incident_lifecycle.yml
+# ITSM lifecycle test with verbose output
+ansible-playbook -vvv -i ../inventory/production.yml test_itsm_lifecycle.yml
 ```
 
-### Test Runner Options
+### Common Test Patterns
 
 ```bash
-./run_tests.sh [OPTIONS] [TEST_NAME]
+# Test a specific role
+ansible-playbook test_device_uptime_role.yml
+ansible-playbook test_config_backup_role.yml
+ansible-playbook test_interface_monitoring_role.yml
 
-Options:
-  -v, --verbose                    Run with verbose output (-vvv)
-  -i, --inventory FILE            Use specific inventory file
-  --vault-password-file FILE      Vault password file
-  -h, --help                      Show help message
+# Test ITSM functionality  
+ansible-playbook test_itsm_incidents.yml
+ansible-playbook test_itsm_changes.yml
+ansible-playbook test_itsm_problems.yml
 
-Available Tests:
-  connectivity                    Basic device connectivity (no ServiceNow)
-  servicenow                      ServiceNow connection and role execution  
-  failed-device                   Incident creation for failed device
-  incident-lifecycle              Complete incident lifecycle (create + close)
-  incident-creation               Standalone incident creation
-  incident-closure                Incident closure with templates
-  change-request                  Change request creation
-  problem-record                  Problem record creation
-  asset-tag                      Incident with asset tag association
-  validation-error               Required field validation errors
-  all                            Run all tests sequentially
+# Test integration features
+ansible-playbook test_basic_connectivity.yml
+ansible-playbook test_cmdb_integration.yml
+ansible-playbook test_template_rendering.yml
 ```
 
 ## Test Requirements
@@ -111,21 +105,21 @@ vault_servicenow_default_assignment_group: "IT Operations"
 
 ### Basic Tests
 
-#### `test_connectivity.yml`
-- **Purpose**: Validate basic Ansible connectivity to target devices
-- **ServiceNow**: Not required
-- **What it tests**: Ping and SSH connectivity
+#### `test_basic_connectivity.yml`
+- **Purpose**: Test basic connectivity and ServiceNow ticket creation/closure
+- **ServiceNow**: Required
+- **What it tests**: Ping, SSH connectivity, and incident lifecycle
 - **Duration**: < 1 minute
 
-#### `test_servicenow.yml`  
-- **Purpose**: Test ServiceNow integration with device monitoring
+#### `test_device_uptime_role.yml`  
+- **Purpose**: Test device uptime monitoring role end-to-end
 - **ServiceNow**: Required
-- **What it tests**: Full device_uptime role execution
+- **What it tests**: Full device_uptime role execution with incident management
 - **Duration**: 1-2 minutes
 
 ### Validation Tests
 
-#### `test_validation_error.yml`
+#### `test_itsm_validation.yml`
 - **Purpose**: Verify required field validation works properly
 - **ServiceNow**: Required  
 - **What it tests**: Missing caller and short_description fields
@@ -134,28 +128,28 @@ vault_servicenow_default_assignment_group: "IT Operations"
 
 ### Incident Management Tests
 
-#### `test_failed_device.yml`
+#### `test_template_rendering.yml`
 - **Purpose**: Test incident creation for device failures with templates
 - **ServiceNow**: Required
 - **What it tests**: Template rendering and incident creation
 - **Creates**: New incident in ServiceNow
 - **Duration**: 1-2 minutes
 
-#### `test_incident_creation.yml`
+#### `test_itsm_incidents.yml`
 - **Purpose**: Standalone incident creation test
 - **ServiceNow**: Required
 - **What it tests**: Direct incident creation via servicenow_itsm role
 - **Creates**: New incident in ServiceNow
 - **Duration**: 1 minute
 
-#### `test_incident_closure.yml`
+#### `test_itsm_incident_closure.yml`
 - **Purpose**: Test incident closure with templates
 - **ServiceNow**: Required
 - **What it tests**: Template rendering for closure, incident closure logic
 - **Requires**: Existing incident with matching correlation_id
 - **Duration**: 1 minute
 
-#### `test_incident_lifecycle.yml`
+#### `test_itsm_lifecycle.yml`
 - **Purpose**: Complete incident workflow demonstration
 - **ServiceNow**: Required
 - **What it tests**: Create incident → wait → auto-close incident
@@ -164,14 +158,14 @@ vault_servicenow_default_assignment_group: "IT Operations"
 
 ### ITSM Object Tests
 
-#### `test_change_request.yml`
+#### `test_itsm_changes.yml`
 - **Purpose**: Change request creation and field validation
 - **ServiceNow**: Required
 - **What it tests**: servicenow_itsm role with change request type
 - **Creates**: New change request in ServiceNow
 - **Duration**: 1-2 minutes
 
-#### `test_problem_record.yml`
+#### `test_itsm_problems.yml`
 - **Purpose**: Problem record creation and management
 - **ServiceNow**: Required
 - **What it tests**: servicenow_itsm role with problem record type
@@ -180,7 +174,7 @@ vault_servicenow_default_assignment_group: "IT Operations"
 
 ### Integration Tests
 
-#### `test_asset_tag.yml`
+#### `test_cmdb_integration.yml`
 - **Purpose**: Test Configuration Item (CI) association
 - **ServiceNow**: Required (with CI data)
 - **What it tests**: Asset tag lookup and CI association
