@@ -8,13 +8,13 @@ This project provides a comprehensive solution for monitoring network infrastruc
 
 ## Features
 
-- **🔍 Automatic Device Monitoring**: Continuous health checks for network devices
-- **📋 ServiceNow Integration**: Automatic incident creation, updates, and closure
-- **🏭 Role Discovery Factory**: Automatically discovers and schedules monitoring roles
-- **⏰ Systemd Scheduling**: Reliable, persistent timer-based execution
-- **🔧 Template-Based**: Jinja2 templates for flexible incident content
-- **🛡️ Duplicate Prevention**: Correlation-based incident deduplication
-- **📊 CMDB Integration**: Automatic Configuration Item (CI) association
+- **Automatic Device Monitoring**: Continuous health checks for network devices
+- **ServiceNow Integration**: Automatic incident creation, updates, and closure
+- **Role Discovery Factory**: Automatically discovers and schedules monitoring roles
+- **Systemd Scheduling**: Reliable, persistent timer-based execution
+- **Template-Based**: Jinja2 templates for flexible incident content
+- **Duplicate Prevention**: Correlation-based incident deduplication
+- **CMDB Integration**: Automatic Configuration Item (CI) association
 
 ## Quick Setup
 
@@ -45,12 +45,16 @@ This project provides a comprehensive solution for monitoring network infrastruc
 ansible-servicenow/
 ├── roles/
 │   ├── device_uptime/          # Network device monitoring role
+│   ├── interface_monitoring/   # Interface status monitoring role
+│   ├── config_backup/          # Configuration backup role
+│   ├── device_log_collection/  # Device log collection role
 │   └── servicenow_itsm/        # ServiceNow API wrapper role
 ├── scheduler/                  # Automated scheduling system
 │   ├── scheduler.py            # Main orchestrator
-│   ├── monitoring_role_factory.py  # Role discovery factory
+│   ├── scheduler_factory.py    # Role discovery factory
 │   └── templates/              # Systemd service templates
-├── examples/                   # Sample configurations
+├── playbooks/                  # Production playbooks
+├── inventory/                  # Inventory examples and structure
 ├── tests/                      # Comprehensive test suite
 │   ├── run_tests.sh           # Test runner script
 │   └── README.md              # Test documentation
@@ -132,10 +136,10 @@ For complete field requirements, examples, and configuration details, see the [S
 The project includes a sophisticated factory-based scheduler that automatically discovers monitoring roles and creates systemd timers for production deployment.
 
 ### Key Features
-- **🔍 Automatic Discovery**: Finds all monitoring-enabled roles
-- **⚙️ Systemd Integration**: Generates production-ready service files
-- **🛡️ Security Hardening**: Isolated execution with minimal privileges
-- **📊 Status Monitoring**: Real-time service status and logging
+- **Automatic Discovery**: Finds all monitoring-enabled roles
+- **Systemd Integration**: Generates production-ready service files
+- **Security Hardening**: Isolated execution with minimal privileges
+- **Status Monitoring**: Real-time service status and logging
 
 ### Quick Usage
 ```bash
@@ -153,7 +157,7 @@ For complete scheduler documentation including architecture, configuration, and 
 Configure your network devices with proper asset tags for ServiceNow CI association:
 
 ```yaml
-# examples/inventory.yml
+# inventory/production.yml.example
 core-sw-01:
   ansible_host: 10.1.1.1
   device_asset_tag: "P1000002"  # Links to ServiceNow CI
@@ -267,7 +271,7 @@ ansible-vault encrypt group_vars/all/vault.yml
 
 3. **Setup inventory**:
 ```bash
-cp examples/inventory.yml inventory.yml
+cp inventory/production.yml.example inventory/production.yml
 # Configure your devices
 ```
 

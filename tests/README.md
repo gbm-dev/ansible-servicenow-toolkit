@@ -46,13 +46,13 @@ You can also run tests manually with ansible-playbook:
 
 ```bash
 # Basic test
-ansible-playbook -i ../examples/inventory.yml test_connectivity.yml
+ansible-playbook -i ../inventory/production.yml test_connectivity.yml
 
 # With vault password file
-ansible-playbook -i ../examples/inventory.yml --vault-password-file ../.vault_pass test_failed_device.yml
+ansible-playbook -i ../inventory/production.yml --vault-password-file ../.vault_pass test_failed_device.yml
 
 # With verbose output
-ansible-playbook -vvv -i ../examples/inventory.yml test_incident_lifecycle.yml
+ansible-playbook -vvv -i ../inventory/production.yml test_incident_lifecycle.yml
 ```
 
 ### Test Runner Options

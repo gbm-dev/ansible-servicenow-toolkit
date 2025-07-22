@@ -10,7 +10,7 @@ The Monitoring Scheduler is a factory-pattern based system that automatically di
 
 ### Design Patterns
 
-1. **Factory Pattern**: `MonitoringRoleFactory` discovers and validates monitoring roles
+1. **Factory Pattern**: `SchedulerFactory` discovers and validates monitoring roles
 2. **Template Pattern**: Jinja2 templates generate systemd service files
 3. **Command Pattern**: CLI interface for management operations
 4. **Strategy Pattern**: Different scheduling strategies per role type
@@ -20,7 +20,7 @@ The Monitoring Scheduler is a factory-pattern based system that automatically di
 ```
 scheduler/
 ├── scheduler.py                    # Main orchestrator and CLI
-├── monitoring_role_factory.py     # Role discovery factory
+├── scheduler_factory.py           # Role discovery factory
 ├── templates/
 │   ├── systemd_service.j2         # Systemd service file template
 │   └── systemd_timer.j2           # Systemd timer file template
@@ -33,26 +33,22 @@ scheduler/
 
 The factory scans the `roles/` directory and discovers roles with monitoring capabilities:
 
-1. **Scan Process**: Iterates through all role directories
-2. **Configuration Detection**: Looks for `monitoring_config` in `defaults/main.yml`
+1. **Scan Process**: Iterates through all role directories  
+2. **Configuration Detection**: Looks for `default_schedule_config` in `defaults/main.yml`
 3. **Validation**: Ensures required fields are present and valid
 4. **Exclusion**: Automatically skips wrapper roles like `servicenow_itsm`
 
 ### Role Discovery Criteria
 
-A role is considered "monitorable" if it has:
+A role is considered "monitorable" if it has a `default_schedule_config` section:
 
 ```yaml
 # roles/<role_name>/defaults/main.yml
-monitoring_config:
-  enabled: true                           # Must be enabled
-  role_type: device_monitoring           # Role classification
-  default_schedule: "*/5 * * * *"        # Cron-style schedule
+default_schedule_config:
+  schedule: "*/5 * * * *"                # Cron-style schedule
   description: "Role description"         # Human-readable description
   inventory_groups: [network_devices]    # Target inventory groups
   timeout: 300                           # Execution timeout (seconds)
-  retry_count: 3                         # Retry attempts
-  playbook_args: "--limit={{inventory_group}}"  # Additional ansible-playbook args
 ```
 
 ### Systemd Service Generation
@@ -79,7 +75,7 @@ python3 scheduler.py summary
 python3 scheduler.py create-timers --dry-run
 
 # Create systemd timers for production
-sudo python3 scheduler.py create-timers --inventory ../examples/inventory.yml
+sudo python3 scheduler.py create-timers --inventory ../inventory/production.yml
 
 # Show status of all monitoring services
 python3 scheduler.py status
@@ -124,11 +120,11 @@ $ python3 scheduler.py status
 Monitoring Services Status (1 roles):
 ============================================================
 
-📊 device_uptime
+device_uptime
    Description: Network device connectivity monitoring with ServiceNow integration
    Schedule: */5 * * * *
-   Service: 🟢 ACTIVE
-   Timer: 🟢 ACTIVE
+   Service: ACTIVE
+   Timer: ACTIVE
 ```
 
 ## Configuration
@@ -143,32 +139,24 @@ Each monitoring role must include a `monitoring_config` section in its `defaults
 role_timeout: 30
 role_retries: 2
 
-# Monitoring scheduler configuration (required for discovery)
-monitoring_config:
-  enabled: true
-  role_type: security_monitoring
-  default_schedule: "0 */6 * * *"  # Every 6 hours
+# Default scheduling configuration (for playbook inheritance)
+default_schedule_config:
+  schedule: "0 */6 * * *"  # Every 6 hours
   description: "Security vulnerability scanning with incident management"
   inventory_groups:
     - network_devices
     - security_critical
   timeout: 600
-  retry_count: 2
-  playbook_args: "--limit={{inventory_group}} -e role_timeout={{timeout}}"
 ```
 
 ### Configuration Fields Reference
 
 | Field | Required | Description | Example |
 |-------|----------|-------------|---------|
-| `enabled` | Yes | Whether role can be scheduled | `true` |
-| `role_type` | Yes | Classification of monitoring role | `device_monitoring` |
-| `default_schedule` | Yes | Cron-format schedule | `"*/5 * * * *"` |
+| `schedule` | Yes | Cron-format schedule | `"*/5 * * * *"` |
 | `description` | Yes | Human-readable description | `"Network monitoring"` |
 | `inventory_groups` | Yes | Target Ansible inventory groups | `["network_devices"]` |
 | `timeout` | No | Execution timeout in seconds | `300` |
-| `retry_count` | No | Retry attempts on failure | `3` |
-| `playbook_args` | No | Additional ansible-playbook arguments | `"--limit={{inventory_group}}"` |
 
 ### Schedule Format
 
@@ -322,8 +310,7 @@ sudo logrotate /etc/logrotate.d/ansible-monitoring
 #### Common Issues
 
 1. **Role not discovered**:
-   - Check `monitoring_config` in `defaults/main.yml`
-   - Ensure `enabled: true`
+   - Check `default_schedule_config` in `defaults/main.yml`
    - Validate YAML syntax
 
 2. **Service creation fails**:
@@ -380,12 +367,7 @@ ProtectKernelTunables=true
 
 ### Multiple Inventory Files
 
-Run different roles against different inventories:
-
-```yaml
-monitoring_config:
-  playbook_args: "--inventory /path/to/custom/inventory.yml --limit={{inventory_group}}"
-```
+This system now uses playbook-level scheduling - see the main README for current scheduling approach.
 
 ### Custom Logging
 
@@ -433,7 +415,7 @@ systemd_timer_last_trigger_seconds{name="device-uptime-monitor.timer"}
 
 ### Adding New Features
 
-1. **Role Discovery**: Modify `MonitoringRoleFactory.discover_monitoring_roles()`
+1. **Role Discovery**: Modify `SchedulerFactory.discover_schedulable_playbooks()`
 2. **Service Generation**: Update templates in `templates/`
 3. **CLI Commands**: Add new subcommands in `scheduler.py`
 4. **Validation**: Enhance `validate_role()` method
@@ -509,7 +491,7 @@ A: Yes, create different inventory groups and configure separate schedules for e
 
 ### Q: How do I change the execution schedule?
 
-A: Modify the `default_schedule` in the role's `defaults/main.yml` and re-run `create-timers`.
+A: Modify the `schedule` in the role's `default_schedule_config` in `defaults/main.yml` and re-run `create-timers`.
 
 ### Q: What happens if a service execution takes longer than the schedule interval?
 
@@ -517,7 +499,7 @@ A: Systemd prevents overlapping executions. The next execution waits until the c
 
 ### Q: Can I disable a monitoring role temporarily?
 
-A: Yes, set `enabled: false` in the role's monitoring configuration or stop the timer with `systemctl stop <service>.timer`.
+A: Yes, stop the timer with `systemctl stop <service>.timer`.
 
 ### Q: How do I add custom environment variables?
 
