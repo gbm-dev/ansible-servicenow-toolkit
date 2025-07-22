@@ -28,7 +28,7 @@
         name: servicenow_itsm
       vars:
         itsm_type: problem
-        problem_short_description: "[PROBLEM] Recurring connectivity issues on {{ inventory_hostname }}"
+        problem_short_description: "[TEST] Problem record test - Recurring connectivity issues on {{ inventory_hostname }}"
         problem_description: |
           Recurring connectivity issues identified on network device {{ inventory_hostname }}
           
@@ -64,5 +64,5 @@
         problem_type: defect
         problem_known_error: false
         problem_root_cause_known: false
-        problem_work_notes: "Automated problem record created by Ansible based on pattern analysis"
+        problem_work_notes: "[TEST] This is a test problem record created by test_problem_record.yml to verify ServiceNow problem management functionality"
         problem_asset_tag: "{{ device_asset_tag }}"

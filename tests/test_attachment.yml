@@ -86,7 +86,7 @@
         incident_category: "software"
         incident_subcategory: "configuration"
         incident_assignment_group: "{{ servicenow_default_assignment_group }}"
-        incident_work_notes: "This is a test incident to verify attachment functionality"
+        incident_work_notes: "[TEST] This is a test incident created by test_attachment.yml to verify file attachment functionality in ServiceNow"
         incident_attachments:
           - path: "/tmp/test_attachment.log"
             name: "system_log.txt"

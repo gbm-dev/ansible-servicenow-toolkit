@@ -34,7 +34,7 @@
         incident_category: "software"
         incident_subcategory: "configuration"
         incident_assignment_group: "{{ servicenow_default_assignment_group }}"
-        incident_work_notes: "Created with trusted localhost timestamp delegation"
+        incident_work_notes: "[TEST] This is a test incident created by test_incident_lifecycle.yml to verify incident creation and closure with timestamp handling"
         
     - name: Display created incident info
       debug:

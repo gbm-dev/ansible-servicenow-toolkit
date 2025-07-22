@@ -22,7 +22,7 @@
       vars:
         itsm_type: incident
         incident_caller: "{{ servicenow_default_caller }}"
-        incident_short_description: "[NETWORK] Device test-router-01 unreachable"
+        incident_short_description: "[TEST] Incident creation test - Device test-router-01 unreachable"
         incident_description: |
           Network Device Connectivity Failure
           
@@ -53,4 +53,4 @@
         incident_assignment_group: "{{ servicenow_default_assignment_group }}"
         incident_category: network
         incident_subcategory: connectivity
-        incident_work_notes: "Test incident created by Ansible automation"
+        incident_work_notes: "[TEST] This is a test incident created by test_incident_creation.yml to verify ServiceNow incident creation functionality"

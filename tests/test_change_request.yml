@@ -29,7 +29,7 @@
       vars:
         itsm_type: change
         change_type: normal
-        change_short_description: "[MAINTENANCE] Network device {{ inventory_hostname }} scheduled maintenance"
+        change_short_description: "[TEST] Change request test - Network device {{ inventory_hostname }} scheduled maintenance"
         change_description: |
           Scheduled maintenance for network device {{ inventory_hostname }}
           
@@ -55,7 +55,7 @@
         change_category: software
         change_assignment_group: "{{ servicenow_default_assignment_group }}"
         change_requested_by: "{{ servicenow_default_caller }}"
-        change_work_notes: "Automated change request created by Ansible"
+        change_work_notes: "[TEST] This is a test change request created by test_change_request.yml to verify ServiceNow change management functionality"
         change_asset_tag: "{{ device_asset_tag }}"
         change_implementation_plan: |
           1. Create configuration backup

@@ -2,6 +2,8 @@
 
 This directory contains comprehensive tests for the Ansible ServiceNow monitoring system.
 
+**Important**: All tests create ServiceNow tickets (incidents, changes, or problems) with `[TEST]` prefixes in their short descriptions to clearly identify them as test-generated tickets.
+
 ## Test Categories
 
 ### Basic Connectivity Tests

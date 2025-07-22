@@ -43,7 +43,7 @@
           vars:
             itsm_type: incident
             incident_caller: "{{ servicenow_default_caller }}"
-            incident_short_description: "[NETWORK] Device {{ inventory_hostname }} unreachable"
+            incident_short_description: "[TEST] Failed device test - Device {{ inventory_hostname }} unreachable"
             incident_description: "{{ rendered_description }}"
             incident_work_notes: "{{ rendered_work_notes }}"
             incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"

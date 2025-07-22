@@ -201,7 +201,7 @@
           vars:
             itsm_type: incident
             incident_caller: "{{ servicenow_default_caller }}"
-            incident_short_description: "[NETWORK] Device {{ inventory_hostname }} unreachable"
+            incident_short_description: "[TEST] Config backup test - Device {{ inventory_hostname }} unreachable"
             incident_description: "Test device unreachable incident for backup skip test on real device"
             incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
             incident_urgency: medium

@@ -5,7 +5,42 @@
   hosts: external-rtr-01
   gather_facts: no
   
+  vars:
+    # ServiceNow connection from vault
+    servicenow_host: "{{ vault_servicenow_host }}"
+    servicenow_username: "{{ vault_servicenow_username }}"
+    servicenow_password: "{{ vault_servicenow_password }}"
+    
+    # Default incident parameters from vault
+    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+
   tasks:
+    - name: Create test incident for connectivity test
+      include_role:
+        name: servicenow_itsm
+      vars:
+        itsm_type: incident
+        incident_caller: "{{ servicenow_default_caller }}"
+        incident_short_description: "[TEST] Connectivity test in progress - {{ inventory_hostname }}"
+        incident_description: |
+          Connectivity Test Execution
+          
+          Device Details:
+          - Hostname: {{ inventory_hostname }}
+          - IP Address: {{ ansible_host }}
+          - Test Type: Basic ping and SSH connectivity
+          - Test File: test_connectivity.yml
+          
+          This test incident tracks the execution of basic connectivity tests.
+        incident_correlation_id: "connectivity_test_{{ inventory_hostname }}"
+        incident_urgency: low
+        incident_impact: low
+        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_category: network
+        incident_subcategory: connectivity
+        incident_work_notes: "[TEST] Created by test_connectivity.yml to track connectivity test execution"
+
     - name: Test basic ping
       ansible.builtin.ping:
       register: ping_result
@@ -24,3 +59,13 @@
     - name: Show SSH result
       debug:
         var: ssh_result
+        
+    - name: Close connectivity test incident
+      include_role:
+        name: servicenow_itsm
+        tasks_from: close_incident
+      vars:
+        incident_correlation_id: "connectivity_test_{{ inventory_hostname }}"
+        incident_close_code: "Resolved by caller"
+        incident_close_notes: "[TEST] Connectivity test completed successfully"
+        incident_close_work_notes: "Ping result: {{ 'SUCCESS' if ping_result.ping is defined else 'FAILED' }}, SSH result: {{ 'SUCCESS' if ssh_result.elapsed is defined else 'FAILED' }}"
