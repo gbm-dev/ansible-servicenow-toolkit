@@ -19,7 +19,7 @@ This toolkit provides network infrastructure monitoring that automatically creat
 
 1. **Install dependencies:**
    ```bash
-   ansible-galaxy collection install servicenow.itsm cisco.ios community.general
+   ansible-galaxy collection install -r requirements.yml
    ```
 
 2. **Configure credentials:**

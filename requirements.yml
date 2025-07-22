@@ -1,0 +1,18 @@
+---
+# Ansible Collections Requirements
+# Install with: ansible-galaxy collection install -r requirements.yml
+
+collections:
+  # ServiceNow ITSM Integration
+  - name: servicenow.itsm
+    
+  # Cisco Network Device Support
+  - name: cisco.ios
+    
+  - name: cisco.iosxr
+    
+  # General Utilities and Cross-Platform Support
+  - name: community.general
+    
+  # Additional Network Collections
+  - name: ansible.netcommon

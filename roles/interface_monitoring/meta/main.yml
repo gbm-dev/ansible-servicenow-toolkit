@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Network Operations Team
-  description: Network device connectivity monitoring with ServiceNow integration
+  description: Network interface status monitoring with ServiceNow incident management
   license: MIT
   min_ansible_version: "11.0"
   platforms:
@@ -17,11 +17,12 @@ galaxy_info:
   galaxy_tags:
     - network
     - monitoring
-    - connectivity
+    - interfaces
     - servicenow
 
 dependencies: []
 
 collections:
   - cisco.ios
+  - cisco.iosxr
   - community.general
