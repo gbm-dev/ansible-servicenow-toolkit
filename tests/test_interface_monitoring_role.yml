@@ -8,11 +8,11 @@
     - ../group_vars/all/vault.yml
     
   vars:
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     interface_monitoring_storage_path: "/tmp/test-interface"
     test_interface: "Vlan999"
     # Override ignore patterns to include our test VLAN

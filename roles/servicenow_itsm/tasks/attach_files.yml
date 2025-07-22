@@ -14,10 +14,10 @@
 
 - name: Attach files to ServiceNow record
   uri:
-    url: "{{ servicenow_host }}/api/now/attachment/file?table_name={{ attachment_table_name }}&table_sys_id={{ attachment_record_sys_id }}&file_name={{ attachment.name | default(attachment.path | basename) }}"
+    url: "{{ vault_servicenow_host }}/api/now/attachment/file?table_name={{ attachment_table_name }}&table_sys_id={{ attachment_record_sys_id }}&file_name={{ attachment.name | default(attachment.path | basename) }}"
     method: POST
     headers:
-      Authorization: "Basic {{ (servicenow_username + ':' + servicenow_password) | b64encode }}"
+      Authorization: "Basic {{ (vault_servicenow_username + ':' + vault_servicenow_password) | b64encode }}"
       Content-Type: "{{ attachment.content_type | default('text/plain') }}"
     src: "{{ attachment.path }}"
     status_code: 201

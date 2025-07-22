@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
   tasks:
     - name: Display configuration
@@ -22,8 +22,8 @@
           ServiceNow Configuration:
           - Instance: {{ vault_servicenow_instance_name }}
           - URL: {{ servicenow_host }}
-          - Default Caller: {{ servicenow_default_caller }}
-          - Default Assignment Group: {{ servicenow_default_assignment_group }}
+          - Default Caller: {{ vault_servicenow_default_caller }}
+          - Default Assignment Group: {{ vault_servicenow_default_assignment_group }}
           - Target Device: {{ inventory_hostname }} ({{ ansible_host }})
       run_once: true
       delegate_to: localhost
@@ -34,4 +34,4 @@
       vars:
         uptime_incident_urgency: 3
         uptime_incident_impact: 3
-        uptime_assignment_group: "{{ servicenow_default_assignment_group }}"
+        uptime_assignment_group: "{{ vault_servicenow_default_assignment_group }}"

@@ -1,9 +1,9 @@
 ---
 # ServiceNow connection configuration
 servicenow_instance:
-  host: "{{ servicenow_host }}"
-  username: "{{ servicenow_username }}"
-  password: "{{ servicenow_password }}"
+  host: "{{ vault_servicenow_host }}"
+  username: "{{ vault_servicenow_username }}"
+  password: "{{ vault_servicenow_password }}"
 
 # File attachment configuration
 # Usage examples:

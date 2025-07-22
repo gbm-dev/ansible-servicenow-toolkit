@@ -10,13 +10,13 @@
     
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
     # Test configuration storage
     config_backup_storage_path: "/tmp/devnet-config-backups"

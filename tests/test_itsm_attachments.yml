@@ -8,11 +8,11 @@
     - ../group_vars/all/vault.yml
     
   vars:
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
   tasks:
     - name: Create test log file
@@ -77,7 +77,7 @@
         name: servicenow_itsm
       vars:
         itsm_type: incident
-        incident_caller: "{{ servicenow_default_caller }}"
+        incident_caller: "{{ vault_servicenow_default_caller }}"
         incident_short_description: "[TEST] ServiceNow attachment test"
         incident_description: "Testing the new attachment functionality in the ServiceNow role. This incident should have a log file attached."
         incident_correlation_id: "attachment_test_{{ ansible_date_time.epoch }}"
@@ -85,7 +85,7 @@
         incident_impact: "low"
         incident_category: "software"
         incident_subcategory: "configuration"
-        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
         incident_work_notes: "[TEST] This is a test incident created by test_attachment.yml to verify file attachment functionality in ServiceNow"
         incident_attachments:
           - path: "/tmp/test_attachment.log"

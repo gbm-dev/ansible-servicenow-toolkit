@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
   tasks:
     - name: Create incident associated with asset tag P1000002
@@ -21,7 +21,7 @@
         name: servicenow_itsm
       vars:
         itsm_type: incident
-        incident_caller: "{{ servicenow_default_caller }}"
+        incident_caller: "{{ vault_servicenow_default_caller }}"
         incident_short_description: "[NETWORK] Device core-sw-03 unreachable"
         incident_description: |
           Network Device Connectivity Failure
@@ -52,7 +52,7 @@
         incident_correlation_id: "device_connectivity_core-sw-03"
         incident_urgency: high
         incident_impact: high
-        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
         incident_category: network
         incident_subcategory: connectivity
         incident_work_notes: "Critical core switch failure - immediate attention required"

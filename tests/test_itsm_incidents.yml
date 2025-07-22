@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
   tasks:
     - name: Force incident creation by simulating failed device check
@@ -21,7 +21,7 @@
         name: servicenow_itsm
       vars:
         itsm_type: incident
-        incident_caller: "{{ servicenow_default_caller }}"
+        incident_caller: "{{ vault_servicenow_default_caller }}"
         incident_short_description: "[TEST] Incident creation test - Device test-router-01 unreachable"
         incident_description: |
           Network Device Connectivity Failure
@@ -50,7 +50,7 @@
         incident_correlation_id: "device_connectivity_test-router-01"
         incident_urgency: medium
         incident_impact: medium
-        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
         incident_category: network
         incident_subcategory: connectivity
         incident_work_notes: "[TEST] This is a test incident created by test_incident_creation.yml to verify ServiceNow incident creation functionality"

@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
     # Simulate a network device from inventory
     inventory_hostname: "core-sw-01"
@@ -58,7 +58,7 @@
         problem_correlation_id: "device_recurring_{{ inventory_hostname }}"
         problem_impact: medium
         problem_urgency: medium
-        problem_assignment_group: "{{ servicenow_default_assignment_group }}"
+        problem_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
         problem_category: network
         problem_subcategory: connectivity
         problem_type: defect

@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
     # Simulate a network device from inventory
     inventory_hostname: "core-sw-01"
@@ -53,8 +53,8 @@
         change_impact: medium
         change_risk: low
         change_category: software
-        change_assignment_group: "{{ servicenow_default_assignment_group }}"
-        change_requested_by: "{{ servicenow_default_caller }}"
+        change_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+        change_requested_by: "{{ vault_servicenow_default_caller }}"
         change_work_notes: "[TEST] This is a test change request created by test_change_request.yml to verify ServiceNow change management functionality"
         change_asset_tag: "{{ device_asset_tag }}"
         change_implementation_plan: |

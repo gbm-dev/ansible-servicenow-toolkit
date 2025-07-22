@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
 
   tasks:
     - name: Create test incident for connectivity test
@@ -21,7 +21,7 @@
         name: servicenow_itsm
       vars:
         itsm_type: incident
-        incident_caller: "{{ servicenow_default_caller }}"
+        incident_caller: "{{ vault_servicenow_default_caller }}"
         incident_short_description: "[TEST] Connectivity test in progress - {{ inventory_hostname }}"
         incident_description: |
           Connectivity Test Execution
@@ -36,7 +36,7 @@
         incident_correlation_id: "connectivity_test_{{ inventory_hostname }}"
         incident_urgency: low
         incident_impact: low
-        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
         incident_category: network
         incident_subcategory: connectivity
         incident_work_notes: "[TEST] Created by test_connectivity.yml to track connectivity test execution"

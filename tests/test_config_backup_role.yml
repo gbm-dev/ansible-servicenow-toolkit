@@ -11,13 +11,13 @@
     
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
     # Test configuration storage
     config_backup_storage_path: "/tmp/test-config-backups"
@@ -200,7 +200,7 @@
             name: servicenow_itsm
           vars:
             itsm_type: incident
-            incident_caller: "{{ servicenow_default_caller }}"
+            incident_caller: "{{ vault_servicenow_default_caller }}"
             incident_short_description: "[TEST] Config backup test - Device {{ inventory_hostname }} unreachable"
             incident_description: "Test device unreachable incident for backup skip test on real device"
             incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"

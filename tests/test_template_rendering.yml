@@ -7,13 +7,13 @@
   
   vars:
     # ServiceNow connection from vault
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
     
     # Default incident parameters from vault
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
     # Simulate a network device from inventory
     inventory_hostname: "core-sw-01"
@@ -42,13 +42,13 @@
             name: servicenow_itsm
           vars:
             itsm_type: incident
-            incident_caller: "{{ servicenow_default_caller }}"
+            incident_caller: "{{ vault_servicenow_default_caller }}"
             incident_short_description: "[TEST] Failed device test - Device {{ inventory_hostname }} unreachable"
             incident_description: "{{ rendered_description }}"
             incident_work_notes: "{{ rendered_work_notes }}"
             incident_correlation_id: "device_connectivity_{{ inventory_hostname }}"
             incident_urgency: high
             incident_impact: high
-            incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+            incident_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
             incident_category: network
             incident_subcategory: connectivity

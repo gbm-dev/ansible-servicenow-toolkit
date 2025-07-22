@@ -2,12 +2,8 @@
 # Global variables for all inventory groups
 # Only essential variables that need to be global should be here
 
-# ServiceNow ITSM Configuration (loaded from vault)
-servicenow_host: "{{ vault_servicenow_host }}"
-servicenow_username: "{{ vault_servicenow_username }}"
-servicenow_password: "{{ vault_servicenow_password }}"
-servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+# ServiceNow ITSM Configuration
+# Variables are defined directly in vault.yml (no indirection needed)
 
 # Network Device Connection Defaults (timeouts only - connection type is OS-specific)
 ansible_command_timeout: 60

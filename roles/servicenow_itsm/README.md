@@ -72,9 +72,9 @@ incident_ci_name: "device-name"  # defaults to inventory_hostname
 - name: Network monitoring with ServiceNow
   hosts: network_devices
   vars:
-    servicenow_host: "https://instance.service-now.com"
-    servicenow_username: "{{ vault_snow_user }}"
-    servicenow_password: "{{ vault_snow_pass }}"
+    vault_servicenow_host: "https://instance.service-now.com"
+    vault_servicenow_username: "{{ vault_snow_user }}"
+    vault_servicenow_password: "{{ vault_snow_pass }}"
   roles:
     - device_uptime
 ```

@@ -226,9 +226,9 @@
     - name: Check for existing device unreachable incident
       servicenow.itsm.incident_info:
         instance:
-          host: "{{ servicenow_host }}"
-          username: "{{ servicenow_username }}"
-          password: "{{ servicenow_password }}"
+          host: "{{ vault_servicenow_host }}"
+          username: "{{ vault_servicenow_username }}"
+          password: "{{ vault_servicenow_password }}"
         sysparm_query: "correlation_id=device_connectivity_{{ inventory_hostname }}^state!=6^state!=7"
       register: existing_connectivity_incident
       delegate_to: localhost

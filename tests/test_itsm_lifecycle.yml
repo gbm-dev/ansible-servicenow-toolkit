@@ -7,11 +7,11 @@
     - group_vars/all/vault.yml
     
   vars:
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
+    vault_servicenow_host: "{{ vault_servicenow_host }}"
+    vault_servicenow_username: "{{ vault_servicenow_username }}"
+    vault_servicenow_password: "{{ vault_servicenow_password }}"
+    vault_servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
+    vault_servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
     
   tasks:
     - name: Show test starting time from localhost
@@ -25,7 +25,7 @@
         name: servicenow_itsm
       vars:
         itsm_type: incident
-        incident_caller: "{{ servicenow_default_caller }}"
+        incident_caller: "{{ vault_servicenow_default_caller }}"
         incident_short_description: "[TEST] Localhost timestamp test - {{ inventory_hostname }}"
         incident_description: "Testing ServiceNow role timestamp delegation from localhost to network device without gathered facts"
         incident_correlation_id: "test_localhost_timestamp_{{ inventory_hostname }}"
@@ -33,7 +33,7 @@
         incident_impact: "low" 
         incident_category: "software"
         incident_subcategory: "configuration"
-        incident_assignment_group: "{{ servicenow_default_assignment_group }}"
+        incident_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
         incident_work_notes: "[TEST] This is a test incident created by test_incident_lifecycle.yml to verify incident creation and closure with timestamp handling"
         
     - name: Display created incident info
