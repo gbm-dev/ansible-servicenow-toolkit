@@ -191,8 +191,8 @@ All test-generated tickets include `[TEST]` prefixes for easy identification.
 
 ### Prerequisites
 
-- Python 3.8+
-- Ansible 2.9+
+- Python 3.12+
+- Ansible 11.0+ (or ansible-core 2.18+)
 - ServiceNow instance with ITSM permissions
 - Network device access credentials
 
@@ -253,21 +253,3 @@ python3 scheduler.py status            # Check service health
 
 See [Scheduler Documentation](scheduler/README.md) for complete configuration and deployment details.
 
-## Documentation
-
-- [ServiceNow Integration Guide](documentation/SERVICENOW_INTEGRATION.md) - Detailed ITSM configuration
-- [Creating New Monitoring Roles](documentation/CREATE_NEW_ROLE.md) - Role development guide
-- [Template Development](documentation/TEMPLATES.md) - Jinja2 template creation
-- [Troubleshooting Guide](documentation/TROUBLESHOOTING.md) - Common issues and solutions
-- [Scheduler Documentation](scheduler/README.md) - Automated scheduling system
-
-## Security
-
-- **Credential Security**: All passwords encrypted with ansible-vault
-- **API Security**: HTTPS-only ServiceNow communication
-- **Access Control**: Minimal required ServiceNow permissions
-- **Audit Logging**: All operations logged for compliance
-
-## License
-
-MIT License - see project files for details.
