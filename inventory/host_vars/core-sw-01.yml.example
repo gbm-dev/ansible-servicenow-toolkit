@@ -1,40 +1,15 @@
 ---
 # Host-specific configuration for core-sw-01
 # This file contains device-specific overrides and settings
+# NOTE: Only includes variables that are actually implemented in the roles
 
-# Device Information
-device_hostname: "core-sw-01"
-device_model: "Cisco Catalyst 9300"
-device_serial: "FCW2140L039"
-device_os_version: "16.12.05"
-
-# Network Configuration
-management_ip: "192.168.1.10"
+# Device Information (used in ServiceNow incident descriptions)
 device_location: "Datacenter A - Rack 1 - U42"
-device_building: "Datacenter A"
-device_floor: "Ground Floor"
-device_room: "Server Room 1"
-
-# Critical device overrides
-device_criticality: "critical"
-monitoring_priority: "high"
-
-# More frequent monitoring for critical core switch
-connectivity_check_interval: "*/2 * * * *"  # Every 2 minutes
-interface_check_interval: "*/5 * * * *"     # Every 5 minutes
 
 # ServiceNow specific settings for critical infrastructure
 incident_urgency: "high"
 incident_impact: "high"
-incident_priority: "1"
 assignment_group: "network.operations.critical"
-
-# Specific interfaces to monitor (if needed)
-# monitored_interfaces:
-#   - GigabitEthernet1/0/1
-#   - GigabitEthernet1/0/2
-#   - TenGigabitEthernet1/1/1
-#   - TenGigabitEthernet1/1/2
 
 # Interface monitoring ignore patterns (interfaces to skip)
 interface_monitoring_ignore_patterns:
@@ -43,15 +18,6 @@ interface_monitoring_ignore_patterns:
   - "Embedded-Service-Engine*"
   - "Vlan1"  # Default VLAN usually not monitored
 
-# Maintenance window (when monitoring might be suppressed)
-maintenance_window: "02:00-04:00"
-maintenance_timezone: "America/New_York"
-
-# Configuration backup settings
-config_backup_enabled: true
-config_backup_retention_days: 90  # Keep longer for critical devices
-config_backup_interval: "0 1 * * *"  # Daily at 1 AM
-
-# Device-specific ServiceNow CI information
-servicenow_ci_name: "core-sw-01.company.local"
-servicenow_ci_class: "Network Switch"
+# Future features (see TODO.md):
+# maintenance_window: "02:00-04:00"  # TODO: Not yet implemented
+# maintenance_timezone: "America/New_York"  # TODO: Not yet implemented
