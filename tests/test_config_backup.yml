@@ -27,12 +27,6 @@
       ansible.builtin.file:
         path: "{{ config_backup_storage_path }}"
         state: absent
-        
-    - name: Create test backup directory
-      ansible.builtin.file:
-        path: "{{ config_backup_storage_path }}"
-        state: directory
-        mode: '0755'
 
     # TEST CASE 1: First backup (no existing backup) - Should succeed and create backup
     - name: "TEST 1: First successful backup (no existing backup)"
@@ -157,7 +151,7 @@
             
         - name: Assert backup failure incident was created
           assert:
-            that: backup_failure_incident.record is defined and backup_failure_incident.record | length > 0
+            that: backup_failure_incident.records is defined and backup_failure_incident.records | length > 0
             fail_msg: "Backup failure incident should have been created"
             success_msg: "✅ Backup failure incident created"
 
@@ -188,9 +182,9 @@
         - name: Assert incident was closed
           assert:
             that: 
-              - closed_incident.record is defined
-              - closed_incident.record | length > 0
-              - closed_incident.record[0].state in ["6", "7"]  # Resolved or Closed
+              - closed_incident.records is defined
+              - closed_incident.records | length > 0
+              - closed_incident.records[0].state in ["6", "7"]  # Resolved or Closed
             fail_msg: "Backup failure incident should have been closed"
             success_msg: "✅ Backup failure incident closed"
 
@@ -247,7 +241,7 @@
           
         - name: Assert backup incident was skipped
           assert:
-            that: skipped_incident.record is not defined or skipped_incident.record | length == 0
+            that: skipped_incident.records is not defined or skipped_incident.records | length == 0
             fail_msg: "Backup incident should have been skipped due to existing connectivity incident"
             success_msg: "✅ Backup incident correctly skipped - device unreachable incident exists"
             

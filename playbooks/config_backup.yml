@@ -13,15 +13,6 @@
       inventory_groups:
         - network_devices
   
-  pre_tasks:
-    - name: Ensure backup storage directory exists
-      ansible.builtin.file:
-        path: "{{ config_backup_storage_path | default('/var/lib/ansible/backups') }}"
-        state: directory
-        mode: '0755'
-      delegate_to: localhost
-      run_once: true
-    
   tasks:
     - name: Run configuration backup with change detection
       include_role:
