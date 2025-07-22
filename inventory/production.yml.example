@@ -53,45 +53,14 @@ all:
               device_location: "Datacenter A - DMZ"
               device_role: "Edge Router"
               
-    # Monitoring Groups (for different monitoring schedules)
+    # Optional: Monitoring priority groupings
     critical_devices:
       hosts:
         core-sw-01:
         core-sw-02:
         edge-rtr-01:
-      vars:
-        monitoring_priority: high
-        connectivity_check_interval: "*/2 * * * *"  # Every 2 minutes
-        interface_check_interval: "*/5 * * * *"     # Every 5 minutes
         
     standard_devices:
       hosts:
         access-sw-01:
         access-sw-02:
-      vars:
-        monitoring_priority: normal
-        connectivity_check_interval: "*/5 * * * *"   # Every 5 minutes
-        interface_check_interval: "*/10 * * * *"     # Every 10 minutes
-
-  vars:
-    # Global ServiceNow Configuration
-    servicenow_host: "{{ vault_servicenow_host }}"
-    servicenow_username: "{{ vault_servicenow_username }}"
-    servicenow_password: "{{ vault_servicenow_password }}"
-    servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
-    servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
-    
-    # Global Network Device Configuration
-    ansible_connection: ansible.netcommon.network_cli
-    ansible_command_timeout: 60
-    ansible_connect_timeout: 30
-    
-    # Monitoring Configuration
-    monitoring_enabled: true
-    log_collection_enabled: true
-    config_backup_enabled: true
-    
-    # Storage Paths
-    monitoring_storage_base: "/var/lib/ansible"
-    backup_storage_path: "/var/lib/ansible/backups"
-    log_storage_path: "/var/lib/ansible/logs"

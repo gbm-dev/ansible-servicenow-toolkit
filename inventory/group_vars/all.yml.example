@@ -1,6 +1,6 @@
 ---
 # Global variables for all inventory groups
-# These variables are applied to all hosts unless overridden
+# Only essential variables that need to be global should be here
 
 # ServiceNow ITSM Configuration (loaded from vault)
 servicenow_host: "{{ vault_servicenow_host }}"
@@ -9,33 +9,7 @@ servicenow_password: "{{ vault_servicenow_password }}"
 servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
 servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
 
-# Monitoring Role Default Configurations
-connectivity_monitoring_timeout: 30
-interface_monitoring_timeout: 60
-config_backup_retention_days: 30
-
-# Default ServiceNow Incident Settings
-default_incident_urgency: "medium"
-default_incident_impact: "medium"
-default_incident_category: "network"
-
-# Default ServiceNow Problem Settings  
-default_problem_urgency: "low"
-default_problem_impact: "medium"
-
-# Default ServiceNow Change Request Settings
-default_change_type: "normal"
-default_change_risk: "low"
-default_change_impact: "low"
-
-# Storage and Logging
-ansible_log_path: "/var/log/ansible/ansible.log"
-monitoring_log_retention_days: 7
-
-# Network Device Defaults
-network_device_timeout: 30
-network_gather_facts: false
-
-# Security Settings
-ansible_host_key_checking: false
-ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+# Network Device Connection Defaults
+ansible_connection: ansible.netcommon.network_cli
+ansible_command_timeout: 60
+ansible_connect_timeout: 30

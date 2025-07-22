@@ -8,42 +8,37 @@ This directory contains example inventory files that you should copy and customi
    ```bash
    # Main inventory
    cp production.yml.example production.yml
-   cp staging.yml.example staging.yml
    
-   # Group variables
+   # Global variables
    cp group_vars/all.yml.example group_vars/all.yml
-   cp group_vars/network_devices.yml.example group_vars/network_devices.yml
    
-   # Host variables (copy and rename for each device)
+   # Host variables (optional, copy and rename for specific devices)
    cp host_vars/core-sw-01.yml.example host_vars/your-device.yml
    ```
 
 2. **Customize for your environment:**
-   - Update device hostnames and IP addresses
-   - Configure device credentials (or use vault)
+   - Update device hostnames and IP addresses  
+   - Configure device credentials (use vault for passwords)
    - Set ServiceNow asset tags for CI linking
-   - Adjust monitoring intervals per device criticality
-   - Configure device-specific settings
+   - Add device-specific overrides in host_vars/ as needed
 
 3. **Security:**
    - Store sensitive data in vault files
-   - Use host_vars/ for device-specific credentials
+   - Use host_vars/ for device-specific credentials  
    - Never commit real credentials to version control
 
 ## File Structure
 
 - `production.yml.example` - Production inventory with network device groups
-- `staging.yml.example` - Staging/lab inventory for testing
-- `group_vars/all.yml.example` - Global variables for all hosts
-- `group_vars/network_devices.yml.example` - Network device specific settings
-- `host_vars/*.yml.example` - Individual device configurations
+- `group_vars/all.yml.example` - Essential global variables (ServiceNow config, connection settings)
+- `host_vars/*.yml.example` - Device-specific overrides (optional)
 
 ## Device Groups
 
-- **critical_devices** - High priority monitoring (every 2-5 minutes)
-- **standard_devices** - Normal priority monitoring (every 5-10 minutes)
 - **core_switches** - Core network infrastructure
-- **access_switches** - Access layer devices
+- **access_switches** - Access layer devices  
 - **routers** - Routing equipment
+- **critical_devices** - High priority devices (optional grouping)
+- **standard_devices** - Normal priority devices (optional grouping)
 
-Customize these groups based on your network topology and monitoring requirements.
+Note: Monitoring configuration is handled by role defaults, not inventory variables.
