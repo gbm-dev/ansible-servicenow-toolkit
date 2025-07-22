@@ -1,0 +1,8 @@
+---
+# Connection parameters for Cisco IOS-XR devices
+# Applies to all devices in the cisco_iosxr_devices group
+
+ansible_network_os: iosxr
+ansible_connection: ansible.netcommon.network_cli
+ansible_user: "{{ vault_cisco_user }}"
+ansible_password: "{{ vault_cisco_password }}"

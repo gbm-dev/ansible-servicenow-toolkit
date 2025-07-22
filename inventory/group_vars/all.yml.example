@@ -9,7 +9,6 @@ servicenow_password: "{{ vault_servicenow_password }}"
 servicenow_default_caller: "{{ vault_servicenow_default_caller }}"
 servicenow_default_assignment_group: "{{ vault_servicenow_default_assignment_group }}"
 
-# Network Device Connection Defaults
-ansible_connection: ansible.netcommon.network_cli
+# Network Device Connection Defaults (timeouts only - connection type is OS-specific)
 ansible_command_timeout: 60
 ansible_connect_timeout: 30

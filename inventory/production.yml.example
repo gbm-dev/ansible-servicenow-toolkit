@@ -1,59 +1,57 @@
 ---
 # Production Inventory for Ansible ServiceNow ITSM Integration
-# This inventory defines network devices and their monitoring configuration
+# Organized by device OS type for proper connection handling
 
 all:
   children:
-    # Network Infrastructure Groups
-    network_devices:
+    # Group by device OS/type for connection parameters
+    cisco_ios_devices:
       children:
-        core_switches:
+        ios_core_switches:
           hosts:
             core-sw-01:
               ansible_host: 192.168.1.10
-              ansible_network_os: ios
-              ansible_user: admin
-              device_asset_tag: "NET001"
-              device_location: "Datacenter A - Rack 1"
-              device_role: "Core Switch"
-              
             core-sw-02:
               ansible_host: 192.168.1.11
-              ansible_network_os: ios
-              ansible_user: admin
-              device_asset_tag: "NET002"
-              device_location: "Datacenter A - Rack 2"
-              device_role: "Core Switch"
               
-        access_switches:
+        ios_access_switches:
           hosts:
             access-sw-01:
               ansible_host: 192.168.1.20
-              ansible_network_os: ios
-              ansible_user: admin
-              device_asset_tag: "NET003"
-              device_location: "Building A - Floor 1"
-              device_role: "Access Switch"
-              
             access-sw-02:
               ansible_host: 192.168.1.21
-              ansible_network_os: ios
-              ansible_user: admin
-              device_asset_tag: "NET004"
-              device_location: "Building A - Floor 2"
-              device_role: "Access Switch"
               
-        routers:
+        ios_routers:
           hosts:
             edge-rtr-01:
               ansible_host: 192.168.1.1
-              ansible_network_os: ios
-              ansible_user: admin
-              device_asset_tag: "NET005"
-              device_location: "Datacenter A - DMZ"
-              device_role: "Edge Router"
-              
-    # Optional: Monitoring priority groupings
+    
+    # Add other device types as needed:
+    # cisco_asa_devices:
+    #   hosts:
+    #     firewall-01:
+    #       ansible_host: 192.168.1.100
+    #   # Connection vars handled by group_vars/cisco_asa_devices.yml
+    
+    # Logical groupings for monitoring and management
+    network_devices:
+      children:
+        cisco_ios_devices:
+        # cisco_asa_devices:
+        
+    core_switches:
+      children:
+        ios_core_switches:
+        
+    access_switches:
+      children:
+        ios_access_switches:
+        
+    routers:
+      children:
+        ios_routers:
+    
+    # Optional: Priority-based groupings
     critical_devices:
       hosts:
         core-sw-01:

@@ -1,0 +1,19 @@
+---
+# Host-specific configuration for core-sw-02
+# Copy this file and rename for your specific device
+
+# Device Information (used in ServiceNow incident descriptions)
+device_location: "Datacenter A - Rack 2"
+device_asset_tag: "NET002"
+
+# ServiceNow specific settings for critical infrastructure
+incident_urgency: "high"
+incident_impact: "high"
+assignment_group: "network.operations.critical"
+
+# Interface monitoring ignore patterns (interfaces to skip)
+interface_monitoring_ignore_patterns:
+  - "Null*"
+  - "Loopback*"
+  - "Embedded-Service-Engine*"
+  - "Vlan1"  # Default VLAN usually not monitored

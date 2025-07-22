@@ -1,0 +1,8 @@
+---
+# Connection parameters for Cisco IOS devices
+# Applies to all devices in the cisco_ios_devices group
+
+ansible_network_os: ios
+ansible_connection: ansible.netcommon.network_cli
+ansible_user: "{{ vault_cisco_user }}"
+ansible_password: "{{ vault_cisco_password }}"

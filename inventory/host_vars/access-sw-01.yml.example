@@ -1,0 +1,18 @@
+---
+# Host-specific configuration for access-sw-01
+# Copy this file and rename for your specific device
+
+# Device Information (used in ServiceNow incident descriptions)
+device_location: "Building A - Floor 1"
+device_asset_tag: "NET003"
+
+# ServiceNow specific settings for standard devices
+incident_urgency: "medium"
+incident_impact: "low"
+assignment_group: "network.operations"
+
+# Interface monitoring ignore patterns (interfaces to skip)
+interface_monitoring_ignore_patterns:
+  - "Null*"
+  - "Loopback*"
+  - "Vlan1"

@@ -1,0 +1,7 @@
+---
+# Connection parameters for Linux devices
+# Applies to all devices in the linux_devices group
+
+ansible_connection: ssh
+ansible_user: "{{ vault_linux_user }}"
+ansible_password: "{{ vault_linux_password }}"
